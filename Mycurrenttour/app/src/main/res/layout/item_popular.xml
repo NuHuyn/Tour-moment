@@ -1,0 +1,23 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="160dp"
+    android:layout_height="wrap_content"
+    android:layout_marginEnd="10dp">
+
+    <ImageView
+        android:id="@+id/imgPopular"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:scaleType="centerCrop"/>
+
+    <TextView
+        android:id="@+id/txtPopularName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#046603"
+        android:textStyle="bold"
+        android:textSize="14sp"
+        android:maxLines="2"
+        android:ellipsize="end"/>
+
+</LinearLayout>
