@@ -28,34 +28,13 @@
                     android:layout_height="wrap_content"/>
 
                 <ImageView
-                    android:id="@+id/btnNotification"
+                    android:id="@+id/imgProfile"
                     android:layout_width="26dp"
                     android:layout_height="26dp"
-                    android:src="@drawable/ic_notification"
+                    android:src="@drawable/ic_person"
                     android:layout_alignParentEnd="true"/>
 
             </RelativeLayout>
-
-            <LinearLayout
-                android:orientation="horizontal"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:src="@drawable/ic_person"
-                    android:layout_marginEnd="6dp"/>
-
-                <TextView
-                    android:text="Jack Wilson"
-                    android:textStyle="bold"
-                    android:textSize="22sp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-
-            </LinearLayout>
 
             <TextView
                 android:text="Discover the Best Place"

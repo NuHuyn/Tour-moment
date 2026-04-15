@@ -1,44 +1,31 @@
 const express = require("express");
-const bcrypt = require("bcryptjs");
 const User = require("../models/User");
-
 const router = express.Router();
 
-router.post("/register", async (req, res) => {
+// Route xử lý khi user đăng nhập bằng Google từ Android
+router.post("/google-login", async (req, res) => {
   try {
+    const { googleId, email, displayName, photoUrl } = req.body;
 
-    const { full_name, email, password } = req.body;
+    // Kiểm tra xem user này đã tồn tại trong database chưa
+    let user = await User.findOne({ googleId });
 
-    const hash = await bcrypt.hash(password, 10);
+    if (!user) {
+      // Nếu chưa có thì tạo mới (đăng ký)
+      user = new User({
+        googleId,
+        email,
+        displayName,
+        photoUrl
+      });
+      await user.save();
+    }
 
-    const user = new User({
-      full_name,
-      email,
-      password_hash: hash
-    });
-
-    await user.save();
-
+    // Trả về thông tin user (đăng nhập thành công)
     res.json(user);
-
-  } catch (error) {
-    res.status(500).json(error);
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi Server: " + err.message });
   }
-});
-
-router.post("/login", async (req, res) => {
-
-  const { email, password } = req.body;
-
-  const user = await User.findOne({ email });
-
-  if (!user) return res.status(400).json("User not found");
-
-  const isMatch = await bcrypt.compare(password, user.password_hash);
-
-  if (!isMatch) return res.status(400).json("Wrong password");
-
-  res.json(user);
 });
 
 module.exports = router;

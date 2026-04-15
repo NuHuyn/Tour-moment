@@ -8,7 +8,16 @@
     <!-- LOCATION (bắt buộc để lấy vị trí) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 
+
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
     <application
+
+
+
         android:allowBackup="true"
         android:usesCleartextTraffic="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -27,8 +36,30 @@
         <activity android:name=".HomeActivity"/>
         <activity android:name=".TourDetailActivity"/>
         <activity android:name=".MyTourActivity"/>
-        <activity android:name=".FavoriteActivity"/>
-        <activity android:name=".BookingActivity"/>
+        <activity android:name=".ReelsActivity"/>
+
+        <activity android:name=".LoginActivity" />
+
+        <activity
+            android:name=".CreateVideoActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".CreateTourActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AddWaypointActivity"
+            android:exported="false" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <activity
             android:name=".MainActivity"
@@ -40,6 +71,12 @@
             </intent-filter>
 
         </activity>
+
+
+        <activity android:name=".ViewVideoActivity"
+            android:exported="false" />
+        <activity android:name=".ProfileActivity" />
+        <activity android:name=".EditProfileActivity" />
 
     </application>
 

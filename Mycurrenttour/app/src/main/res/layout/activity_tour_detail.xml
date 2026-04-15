@@ -1,8 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#FAFAFA">
 
     <LinearLayout
         android:orientation="vertical"
@@ -10,365 +13,201 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <!-- IMAGE -->
-        <ImageView
-            android:id="@+id/imgTourDetail"
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:scaleType="centerCrop"/>
+            android:layout_height="220dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp">
+            <ImageView
+                android:id="@+id/imgTourDetail"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@drawable/centralvietnam" />
+        </androidx.cardview.widget.CardView>
 
-        <!-- TITLE -->
         <TextView
             android:id="@+id/txtTitleDetail"
-            android:textSize="22sp"
+            android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="#1B5E20"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="20dp"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:text="Tour name" />
 
-        <!-- CARD INFO -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            card_view:cardCornerRadius="12dp"
-            card_view:cardElevation="6dp">
-
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp">
             <LinearLayout
                 android:orientation="vertical"
                 android:padding="16dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <!-- Tour ID -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <TextView
-                        android:text="Tour ID:"
-                        android:textStyle="bold"
-                        android:layout_weight="1"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"/>
-
-                    <TextView
-                        android:text="40"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <TextView android:text="Tour code:" android:textStyle="bold" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+                    <TextView android:id="@+id/txtIdDetail" android:text="N/A" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 </LinearLayout>
 
-                <!-- Duration -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp">
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#EEEEEE" android:layout_marginVertical="8dp"/>
 
-                    <TextView
-                        android:text="Duration:"
-                        android:textStyle="bold"
-                        android:layout_weight="1"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="3 days"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <TextView android:text="Time:" android:textStyle="bold" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+                    <TextView android:id="@+id/txtDurationDetail" android:text="N/A" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 </LinearLayout>
 
-                <!-- Start -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp">
-
-                    <TextView
-                        android:text="Start:"
-                        android:textStyle="bold"
-                        android:layout_weight="1"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="30/11/2025"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp">
+                    <TextView android:text="Departure:" android:textStyle="bold" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+                    <TextView android:id="@+id/txtStartDetail" android:text="N/A" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 </LinearLayout>
 
-                <!-- End -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp">
-
-                    <TextView
-                        android:text="End:"
-                        android:textStyle="bold"
-                        android:layout_weight="1"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="03/12/2025"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp">
+                    <TextView android:text="End:" android:textStyle="bold" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+                    <TextView android:id="@+id/txtEndDetail" android:text="N/A" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 </LinearLayout>
 
-                <!-- Location -->
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp">
-
-                    <TextView
-                        android:text="Location:"
-                        android:textStyle="bold"
-                        android:layout_weight="1"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Daklak"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp">
+                    <TextView android:text="Destination:" android:textStyle="bold" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+                    <TextView android:id="@+id/txtLocationDetail" android:text="N/A" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 </LinearLayout>
-
             </LinearLayout>
-
         </androidx.cardview.widget.CardView>
 
-        <!-- PRICE BOX -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            card_view:cardCornerRadius="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
             android:backgroundTint="#2E7D32">
-
             <TextView
                 android:id="@+id/txtPriceDetail"
-                android:text="$40"
-                android:textSize="22sp"
+                android:text="Total expense: $0"
+                android:textSize="20sp"
                 android:textStyle="bold"
                 android:textColor="#FFFFFF"
                 android:padding="16dp"
-                android:layout_width="wrap_content"
+                android:gravity="center"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"/>
         </androidx.cardview.widget.CardView>
 
-        <!-- BOOKING BOX -->
-        <androidx.cardview.widget.CardView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            card_view:cardCornerRadius="12dp"
-            android:backgroundTint="#2E7D32">
-
+            android:layout_marginTop="24dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <View
+                android:layout_width="4dp"
+                android:layout_height="24dp"
+                android:background="#1B5E20" />
             <TextView
-                android:id="@+id/txtBooking"
-                android:text="BOOKING"
-                android:textSize="22sp"
+                android:text="Description:"
+                android:textSize="18sp"
                 android:textStyle="bold"
-                android:textColor="#FFFFFF"
-                android:padding="16dp"
+                android:textColor="#1B5E20"
+                android:layout_marginStart="8dp"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:clickable="true"
-                android:focusable="true"/>
-        </androidx.cardview.widget.CardView>
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
 
+        <TextView
+            android:id="@+id/txtDescription"
+            android:layout_marginTop="8dp"
+            android:textSize="15sp"
+            android:textColor="#555"
+            android:lineSpacingExtra="4dp"
+            android:text="Detailed description..."
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
 
-        <!-- ICON MAP + WEATHER -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <View
+                android:layout_width="4dp"
+                android:layout_height="24dp"
+                android:background="#1B5E20" />
+            <TextView
+                android:text="Route map"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#1B5E20"
+                android:layout_marginStart="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center"
             android:layout_marginTop="12dp">
-
-            <!-- MAP -->
             <LinearLayout
+                android:id="@+id/btnWholeRoute"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:id="@+id/iconMap"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/ic_map" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Map"
-                    android:textSize="14sp"/>
+                android:orientation="vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground">
+                <ImageView android:id="@+id/iconMap" android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_map" app:tint="#2E7D32"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Entire route" android:textSize="12sp" android:textStyle="bold"/>
             </LinearLayout>
-
-            <!-- WEATHER -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:id="@+id/iconWeather"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/ic_weather" />
-
-                <TextView
-                    android:id="@+id/txtWeather"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Weather: --"
-                    android:textSize="14sp"/>
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                <ImageView android:id="@+id/iconWeather" android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_weather" app:tint="#2196F3"/>
+                <TextView android:id="@+id/txtWeather" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Weather: --" android:textSize="12sp"/>
             </LinearLayout>
-
         </LinearLayout>
 
-        <com.google.android.gms.maps.MapView
-            android:id="@+id/mapView"
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:layout_marginTop="12dp"/>
+            android:layout_height="250dp"
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="12dp">
+            <org.osmdroid.views.MapView
+                android:id="@+id/mapView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </androidx.cardview.widget.CardView>
 
-
-
-        <!-- DESCRIPTION -->
-        <TextView
-            android:id="@+id/txtDescription"
-            android:layout_marginTop="16dp"
-            android:textSize="16sp"
-            android:textColor="#444"
-            android:text="Experience the real agricultural life of Dak Lak in this 5-day tour. You will discover coffee farms, learn local traditions, join hands-on farming activities, and enjoy peaceful nature in the Central Highlands."
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
-    <TextView
-        android:text="Journey Highlights"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:layout_marginTop="16dp"
-        android:textColor="#000"/>
-
-    <TextView
-        android:text="Route: Ho Chi Minh City → Daklak"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"/>
-
-    <TextView
-        android:layout_height="wrap_content"
-        android:layout_width="wrap_content"
-        android:text="Duration: 5 days 4 nights"/>
-
-    <TextView
-        android:layout_height="wrap_content"
-        android:layout_width="wrap_content"
-        android:text="Transport: Tourist Bus or Personal Vehicle"/>
-
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Detailed Itinerary"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:layout_marginTop="20dp"/>
-    <LinearLayout
-        android:orientation="vertical"
-        android:background="#F5F5F5"
-        android:padding="12dp"
-        android:layout_marginTop="10dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
-        <TextView
             android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
-            android:text="DAY 1 | From City to the Farm"
-            android:textStyle="bold"
-            android:textColor="#FFFFFF"
-            android:background="#2E7D32"
-            android:padding="8dp"
-            android:textSize="16sp"/>
+            android:layout_marginTop="24dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <View
+                android:layout_width="4dp"
+                android:layout_height="24dp"
+                android:background="#1B5E20" />
+            <TextView
+                android:text="Stop details"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#1B5E20"
+                android:layout_marginStart="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
 
-        <TextView
-            android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
-            android:text="Guests travel from the city to the farm in Dak Lak."
-            android:layout_marginTop="8dp"/>
-
-        <TextView
-            android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
-            android:text="Check in, rest, and enjoy a welcome dinner."
-            android:layout_marginTop="4dp"/>
-
-        <TextView
-            android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
-            android:text="DAY 2 | Coffee Harvesting"
-            android:textStyle="bold"
-            android:background="#2E7D32"
-            android:textColor="#FFFFFF"
-            android:padding="8dp"
-            android:layout_marginTop="8dp"/>
-
-        <ImageView
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerWaypointsDetail"
             android:layout_width="match_parent"
-            android:layout_height="160dp"
-            android:scaleType="centerCrop"
-            android:src="@drawable/centralvietnam"
-            android:layout_marginTop="8dp"/>
-
-
-        <TextView
             android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
-            android:layout_marginTop="5dp"
-            android:text="DAY 3 | From City to the Farm"
-            android:textStyle="bold"
-            android:textColor="#FFFFFF"
-            android:background="#2E7D32"
-            android:padding="8dp"
-            android:textSize="16sp"/>
-
-        <TextView
-            android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
-            android:text="Guests travel from the city to the farm in Dak Lak."
-            android:layout_marginTop="8dp"/>
-
-        <TextView
-            android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
-            android:text="DAY 4 | From City to the Farm"
-            android:textStyle="bold"
-            android:textColor="#FFFFFF"
-            android:background="#2E7D32"
-            android:padding="8dp"
-            android:layout_marginTop="8dp"
-            android:textSize="16sp"/>
-
-        <TextView
-            android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
-            android:text="Guests travel from the city to the farm in Dak Lak."
-            android:layout_marginTop="8dp"/>
-
-
-    </LinearLayout>
-
-
+            android:layout_marginTop="10dp"
+            android:nestedScrollingEnabled="false"
+            android:paddingBottom="40dp"/>
     </LinearLayout>
 </ScrollView>

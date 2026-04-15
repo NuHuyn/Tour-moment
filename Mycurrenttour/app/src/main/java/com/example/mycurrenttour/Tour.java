@@ -1,72 +1,102 @@
 package com.example.mycurrenttour;
-public class Tour {
 
-    private String _id;
-    private String tour_name;
+import com.google.gson.annotations.SerializedName;
+import java.io.Serializable;
+import java.util.List;
+import java.util.ArrayList;
+
+public class Tour implements Serializable {
+    @SerializedName("_id")
+    private String id;
+
+    private String title;
     private String description;
-    private String location;
-    private String region;
-    private String category;
-    private int price;
-    private String image_url;
+    private String imageUrl;
+
+    @SerializedName("isShared")
+    private boolean isShared;
+
+    private String startDate;
+    private String endDate;
+    private List<Waypoint> waypoints;
     private String status;
-    private String created_at;
 
-    private Schedule schedule;
+    public boolean isShared() { return isShared; }
+    public void setShared(boolean shared) { this.isShared = shared; }
 
-    public String getId() {
-        return _id;
+    public void setStatus(String status) { this.status = status; }
+    public String getStatus() { return status; }
+
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public String getImageUrl() { return imageUrl; }
+
+    public void setCoverPhoto(String coverPhoto) { this.imageUrl = coverPhoto; }
+
+    public int getTotalPrice() {
+        int total = 0;
+        if (waypoints != null) {
+            for (Waypoint wp : waypoints) {
+                total += wp.getPrice();
+            }
+        }
+        return total;
     }
 
-    public String getTour_name() {
-        return tour_name;
+    public void setWaypoints(List<Waypoint> waypoints) { this.waypoints = waypoints; }
+
+    public void setId(String id) { this.id = id; }
+    public void setTitle(String title) { this.title = title; }
+    public void setDescription(String description) { this.description = description; }
+    public void setStartDate(String startDate) { this.startDate = startDate; }
+    public void setEndDate(String endDate) { this.endDate = endDate; }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+    public List<Waypoint> getWaypoints() { return waypoints; }
+    public String getStartDateString() { return startDate; }
+    public String getEndDateString() { return endDate; }
+
+    // --- LỚP WAYPOINT (ĐÃ SỬA VỊ TRÍ IS_EXPANDED) ---
+    public static class Waypoint implements Serializable {
+        private String locationName;
+        private String note;
+        private int price;
+        private List<String> photos = new ArrayList<>();
+        private Coordinate coordinate;
+
+        // BIẾN NÀY PHẢI NẰM Ở ĐÂY ĐỂ ADAPTER KHÔNG BÁO LỖI ĐỎ
+        private transient boolean isExpanded = false;
+
+        public boolean isExpanded() { return isExpanded; }
+        public void setExpanded(boolean expanded) { isExpanded = expanded; }
+
+        public String getLocationName() { return locationName; }
+        public String getNote() { return note; }
+        public int getPrice() { return price; }
+        public List<String> getPhotos() { return photos; }
+        public Coordinate getCoordinate() { return coordinate; }
+
+        public void setLocationName(String locationName) { this.locationName = locationName; }
+        public void setNote(String note) { this.note = note; }
+        public void setPrice(int price) { this.price = price; }
+        public void setPhotos(List<String> photos) { this.photos = photos; }
+        public void setCoordinate(Coordinate coordinate) { this.coordinate = coordinate; }
+
+        public void addPhoto(String url) {
+            if (this.photos == null) this.photos = new ArrayList<>();
+            this.photos.add(url);
+        }
     }
 
-    public String getDescription() {
-        return description;
-    }
+    public static class Coordinate implements Serializable {
+        private String type;
+        private List<Double> coordinates;
 
-    public String getLocation() {
-        return location;
-    }
+        public String getType() { return type; }
+        public List<Double> getCoordinates() { return coordinates; }
 
-    public String getRegion() {
-        return region;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public int getPrice() {
-        return price;
-    }
-
-    public String getImage_url() {
-        return image_url;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public String getCreated_at() {
-        return created_at;
-    }
-
-    public Schedule getSchedule() {
-        return schedule;
-    }
-
-    public void setTour_name(String tour_name) {
-        this.tour_name = tour_name;
-    }
-
-    public void setPrice(int price) {
-        this.price = price;
-    }
-
-    public void setImage_url(String image_url) {
-        this.image_url = image_url;
+        public void setType(String type) { this.type = type; }
+        public void setCoordinates(List<Double> coordinates) { this.coordinates = coordinates; }
     }
 }

@@ -1,8 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#FAFAFA">
 
     <LinearLayout
         android:orientation="vertical"
@@ -13,40 +15,60 @@
         <TextView
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:text="My Tours"
-            android:textSize="24sp"
+            android:text="My Travel"
+            android:textSize="26sp"
             android:textStyle="bold"
+            android:textColor="#333333"
             android:layout_marginBottom="16dp"/>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="20dp"
+            android:weightSum="4">
+
+            <Button
+                android:id="@+id/btnTrip"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="Trip"
+                android:textSize="11sp"
+                android:textAllCaps="false"
+                android:backgroundTint="#DDE006"
+                android:textColor="#000"
+                android:padding="0dp"
+                app:cornerRadius="20dp"/>
 
             <Button
                 android:id="@+id/btnUpcoming"
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_weight="1"
+                android:layout_marginEnd="4dp"
                 android:text="Upcoming"
-                android:maxLines="1"
-                android:ellipsize="end"
-                android:textSize="10sp"
-                android:backgroundTint="#dde006"
-                android:textColor="#000"/>
+                android:textSize="11sp"
+                android:textAllCaps="false"
+                android:backgroundTint="#DDE006"
+                android:textColor="#000"
+                android:padding="0dp"
+                app:cornerRadius="20dp"/>
 
             <Button
                 android:id="@+id/btnOngoing"
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_weight="1"
+                android:layout_marginEnd="4dp"
                 android:text="Ongoing"
-                android:maxLines="1"
-                android:ellipsize="end"
-                android:textSize="10sp"
-                android:layout_marginStart="6dp"
-                android:backgroundTint="#e05b1c" />
+                android:textSize="11sp"
+                android:textAllCaps="false"
+                android:backgroundTint="#E05B1C"
+                android:textColor="#FFF"
+                android:padding="0dp"
+                app:cornerRadius="20dp"/>
 
             <Button
                 android:id="@+id/btnCompleted"
@@ -54,92 +76,19 @@
                 android:layout_height="40dp"
                 android:layout_weight="1"
                 android:text="Completed"
-                android:maxLines="1"
-                android:ellipsize="end"
-                android:textSize="10sp"
-                android:layout_marginStart="6dp"
+                android:textSize="11sp"
+                android:textAllCaps="false"
                 android:backgroundTint="#1B5E20"
-                android:textColor="#FFFFFF"/>
-
-            <Button
-                android:id="@+id/btnCancelled"
-                android:layout_width="0dp"
-                android:layout_height="40dp"
-                android:layout_weight="1"
-                android:text="Cancelled"
-                android:maxLines="1"
-                android:ellipsize="end"
-                android:textSize="10sp"
-                android:layout_marginStart="6dp"
-                android:backgroundTint="#e01c19" />
-
+                android:textColor="#FFF"
+                android:padding="0dp"
+                app:cornerRadius="20dp"/>
         </LinearLayout>
 
-        <androidx.cardview.widget.CardView
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerMyTours"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp">
-
-            <LinearLayout
-                android:orientation="horizontal"
-                android:padding="12dp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <ImageView
-                    android:layout_width="120dp"
-                    android:layout_height="120dp"
-                    android:src="@drawable/centralvietnam"
-                    android:scaleType="centerCrop"/>
-
-                <LinearLayout
-                    android:orientation="vertical"
-                    android:layout_marginStart="12dp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content">
-
-                    <TextView
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
-                        android:text="Ha Giang"
-                        android:textSize="18sp"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
-                        android:text="Tour ID: 5"/>
-                    <TextView
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
-                        android:text="Passengers: 1"/>
-                    <TextView
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
-                        android:text="Total Price: $1"/>
-                    <TextView
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
-                        android:text="Start Date: 21/11/2025"/>
-                    <TextView
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
-                        android:text="End Date: 23/11/2025"/>
-
-                    <Button
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="View"
-                        android:layout_marginTop="6dp"
-                        android:backgroundTint="#1B5E20"
-                        android:textColor="#FFFFFF"/>
-                </LinearLayout>
-
-            </LinearLayout>
-
-        </androidx.cardview.widget.CardView>
+            android:layout_marginTop="8dp" />
 
     </LinearLayout>
-
 </ScrollView>

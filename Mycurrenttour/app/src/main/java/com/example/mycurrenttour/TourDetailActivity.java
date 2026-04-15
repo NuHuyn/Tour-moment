@@ -1,273 +1,204 @@
 package com.example.mycurrenttour;
 
-import android.util.Log;
-import android.Manifest;
-import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.squareup.picasso.Picasso;
 
-import android.location.Location;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationResult;
+import org.osmdroid.bonuspack.routing.OSRMRoadManager;
+import org.osmdroid.bonuspack.routing.Road;
+import org.osmdroid.bonuspack.routing.RoadManager;
+import org.osmdroid.config.Configuration;
+import org.osmdroid.util.GeoPoint;
+import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.Marker;
+import org.osmdroid.views.overlay.Polyline;
 
-import com.bumptech.glide.Glide;
-import com.google.android.gms.location.*;
-import com.google.android.gms.maps.*;
-import com.google.android.gms.maps.model.*;
-
-import retrofit2.*;
-import retrofit2.converter.gson.GsonConverterFactory;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 public class TourDetailActivity extends AppCompatActivity {
 
-    ImageView imgTour, iconWeather, iconMap;
-    TextView txtTitle, txtPrice, txtBooking, txtWeather;
+    private ImageView imgTour;
+    private LinearLayout btnWholeRoute;
+    private TextView txtTitle, txtPrice, txtDescription;
+    private TextView txtIdDetail, txtStartDetail, txtEndDetail, txtLocationDetail, txtDurationDetail;
 
-    // ✅ MAP
-    MapView mapView;
-    GoogleMap mMap;
-    FusedLocationProviderClient fusedLocationClient;
+    private RecyclerView recyclerWaypoints;
+    private WaypointViewAdapter waypointAdapter;
+    private MapView mapView;
 
-    LatLng userLatLng;
-    LatLng tourLatLng;
-
-    String locationName;
-
-    String API_KEY = "7cd5d05343fa81acb765e10039c4aa73";
+    private List<GeoPoint> routePoints = new ArrayList<>();
+    private List<Tour.Waypoint> tourWaypoints = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Configuration.getInstance().setUserAgentValue(getPackageName());
         setContentView(R.layout.activity_tour_detail);
 
+        initViews();
+
+        Tour tour = (Tour) getIntent().getSerializableExtra("tour_item");
+        if (tour != null) {
+            this.tourWaypoints = tour.getWaypoints();
+            setupMapConfig();
+            displayTourData(tour);
+            setupWaypointList();
+        } else {
+            Toast.makeText(this, "Invalid data!", Toast.LENGTH_SHORT).show();
+            finish();
+        }
+    }
+
+    private void initViews() {
         imgTour = findViewById(R.id.imgTourDetail);
         txtTitle = findViewById(R.id.txtTitleDetail);
         txtPrice = findViewById(R.id.txtPriceDetail);
-        txtBooking = findViewById(R.id.txtBooking);
-        iconWeather = findViewById(R.id.iconWeather);
-        txtWeather = findViewById(R.id.txtWeather);
+        txtDescription = findViewById(R.id.txtDescription);
 
-        iconMap = findViewById(R.id.iconMap);
 
-        iconMap.setOnClickListener(v -> {
-            Log.d("DEBUG", "ICON MAP CLICKED");
-            drawRoute();
-        });
-
-        // ✅ MAP VIEW
+        btnWholeRoute = findViewById(R.id.btnWholeRoute);
         mapView = findViewById(R.id.mapView);
-        mapView.onCreate(savedInstanceState);
-        mapView.onResume();
+        txtIdDetail = findViewById(R.id.txtIdDetail);
+        txtStartDetail = findViewById(R.id.txtStartDetail);
+        txtEndDetail = findViewById(R.id.txtEndDetail);
+        txtLocationDetail = findViewById(R.id.txtLocationDetail);
+        txtDurationDetail = findViewById(R.id.txtDurationDetail);
+        recyclerWaypoints = findViewById(R.id.recyclerWaypointsDetail);
+    }
 
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+    private void displayTourData(Tour tour) {
+        txtTitle.setText(tour.getTitle());
+        txtDescription.setText(tour.getDescription());
+        txtIdDetail.setText(tour.getId());
 
-        String title = getIntent().getStringExtra("title");
-        int price = getIntent().getIntExtra("price", 0);
-        String imageUrl = getIntent().getStringExtra("image");
-        locationName = getIntent().getStringExtra("location");
-        tourLatLng = new LatLng(12.8477, 108.2557);
-        userLatLng = new LatLng(10.8231, 106.6297);
+        txtPrice.setText("Total expense: $" + tour.getTotalPrice());
 
-        String startDateRaw = getIntent().getStringExtra("start_date");
-
-        txtTitle.setText(title);
-        txtPrice.setText("$" + price);
-
-
-
-        Glide.with(this)
-                .load(imageUrl)
+        Picasso.get().load(tour.getImageUrl())
+                .placeholder(R.drawable.centralvietnam)
+                .error(R.drawable.centralvietnam)
                 .into(imgTour);
 
-        // ✅ FIX CRASH
-        String startDate = "";
-        if (startDateRaw != null && startDateRaw.length() >= 10) {
-            startDate = startDateRaw.substring(0, 10);
-        }
+        txtStartDetail.setText(formatDate(tour.getStartDateString()));
+        txtEndDetail.setText(formatDate(tour.getEndDateString()));
 
-        // ================= MAP =================
-        mapView.getMapAsync(googleMap -> {
-            mMap = googleMap;
-
-            // Bắt sự kiện click map
-            mMap.setOnMapClickListener(latLng -> {
-                drawRoute(); // khi click thì vẽ line
-            });
-        });
-
-        // ================= WEATHER =================
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("https://api.openweathermap.org/data/2.5/")
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
-
-        WeatherApi api = retrofit.create(WeatherApi.class);
-
-        String finalStartDate = startDate;
-
-        iconWeather.setOnClickListener(v -> {
-
-            txtWeather.setText("Loading...");
-
-            api.getForecastByLatLng(
-                            tourLatLng.latitude,
-                            tourLatLng.longitude,
-                            API_KEY,
-                            "metric"
-                    )
-                    .enqueue(new Callback<ForecastResponse>() {
-
-                        @Override
-                        public void onResponse(Call<ForecastResponse> call, Response<ForecastResponse> response) {
-
-                            if (response.isSuccessful() && response.body() != null) {
-
-                                boolean found = false;
-
-                                for (ForecastResponse.Item item : response.body().list) {
-
-                                    if (item.dt_txt != null && item.dt_txt.startsWith(finalStartDate)) {
-
-                                        float temp = item.main.temp;
-                                        txtWeather.setText("🌡 " + temp + "°C");
-                                        found = true;
-                                        break;
-                                    }
-                                }
-
-                                if (!found) {
-                                    txtWeather.setText("No forecast available");
-                                }
-                            }
-                        }
-
-                        @Override
-                        public void onFailure(Call<ForecastResponse> call, Throwable t) {
-                            txtWeather.setText("Error loading weather");
-                        }
-                    });
-        });
-
-        // ================= BOOKING =================
-        txtBooking.setOnClickListener(v -> {
-            Intent intent = new Intent(TourDetailActivity.this, BookingActivity.class);
-            intent.putExtra("title", title);
-            intent.putExtra("price", price);
-            startActivity(intent);
-        });
-    }
-
-    // ================= GET USER LOCATION =================
-    private void getUserLocation() {
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-            return;
-        }
-
-        LocationRequest locationRequest = LocationRequest.create();
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setInterval(5000);
-
-        LocationCallback locationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                if (locationResult == null) return;
-
-                for (Location location : locationResult.getLocations()) {
-
-                    userLatLng = new LatLng(
-                            location.getLatitude(),
-                            location.getLongitude()
-                    );
-
-                    Log.d("DEBUG", "USER: " + userLatLng);
-                    Log.d("DEBUG", "TOUR: " + tourLatLng);
-                    drawRoute();
-
-                    // chỉ cần lấy 1 lần là đủ
-                    fusedLocationClient.removeLocationUpdates(this);
-
-
-                    break;
+        if (tourWaypoints != null && !tourWaypoints.isEmpty()) {
+            txtLocationDetail.setText(tourWaypoints.get(0).getLocationName());
+            routePoints.clear();
+            for (Tour.Waypoint wp : tourWaypoints) {
+                if (wp.getCoordinate() != null) {
+                    List<Double> coords = wp.getCoordinate().getCoordinates();
+                    routePoints.add(new GeoPoint(coords.get(1), coords.get(0)));
                 }
             }
-        };
-
-        fusedLocationClient.requestLocationUpdates(
-                locationRequest,
-                locationCallback,
-                getMainLooper()
-        );
-    }
-
-
-
-    // ================= DRAW =================
-    private void drawRoute() {
-
-        Log.d("DEBUG", "DRAW ROUTE CALLED");
-
-        if (mMap == null || userLatLng == null || tourLatLng == null) {
-            Log.d("DEBUG", "NULL DATA");
-            return;
+            showMarkersOnMap();
         }
-
-        mMap.clear();
-
-        // marker
-        mMap.addMarker(new MarkerOptions().position(userLatLng).title("You"));
-        mMap.addMarker(new MarkerOptions().position(tourLatLng).title(locationName));
-
-        // line đỏ
-        PolylineOptions polyline = new PolylineOptions()
-                .add(userLatLng)
-                .add(tourLatLng)
-                .width(10)
-                .color(android.graphics.Color.RED);
-
-        mMap.addPolyline(polyline);
-
-        // 🔥 QUAN TRỌNG: zoom vào giữa 2 điểm
-        LatLng center = new LatLng(
-                (userLatLng.latitude + tourLatLng.latitude) / 2,
-                (userLatLng.longitude + tourLatLng.longitude) / 2
-        );
-
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(center, 6));
-    }
-    // ================= LIFECYCLE =================
-    @Override
-    protected void onResume() {
-        super.onResume();
-        mapView.onResume();
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mapView.onPause();
+    private void setupWaypointList() {
+        recyclerWaypoints.setLayoutManager(new LinearLayoutManager(this));
+        waypointAdapter = new WaypointViewAdapter(tourWaypoints, position -> {
+            if (position < routePoints.size() - 1) {
+                drawStepRoute(position);
+            } else {
+                Toast.makeText(this, "End point of the journey", Toast.LENGTH_SHORT).show();
+            }
+        });
+        recyclerWaypoints.setAdapter(waypointAdapter);
+
+        btnWholeRoute.setOnClickListener(v -> drawFullRoute());
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        mapView.onDestroy();
+    private void setupMapConfig() {
+        mapView.setMultiTouchControls(true);
+        mapView.getController().setZoom(11.0);
+
+        mapView.setOnTouchListener((v, event) -> {
+            v.getParent().requestDisallowInterceptTouchEvent(true);
+            return false;
+        });
     }
 
-    @Override
-    public void onLowMemory() {
-        super.onLowMemory();
-        mapView.onLowMemory();
+    private void showMarkersOnMap() {
+        mapView.getOverlays().clear();
+        for (int i = 0; i < routePoints.size(); i++) {
+            Marker marker = new Marker(mapView);
+            marker.setPosition(routePoints.get(i));
+            marker.setTitle(tourWaypoints.get(i).getLocationName());
+            marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+            mapView.getOverlays().add(marker);
+        }
+        if (!routePoints.isEmpty()) {
+            mapView.getController().setCenter(routePoints.get(0));
+        }
+        mapView.invalidate();
+    }
+
+    private void drawFullRoute() {
+        if (routePoints.size() < 2) return;
+        clearPolylines();
+
+        new Thread(() -> {
+            RoadManager roadManager = new OSRMRoadManager(this, getPackageName());
+            Road road = roadManager.getRoad(new ArrayList<>(routePoints));
+            Polyline roadOverlay = RoadManager.buildRoadOverlay(road);
+            roadOverlay.setColor(Color.parseColor("#2E7D32"));
+            roadOverlay.setWidth(10f);
+
+            runOnUiThread(() -> {
+                mapView.getOverlays().add(roadOverlay);
+                mapView.invalidate();
+                mapView.getController().animateTo(routePoints.get(0));
+            });
+        }).start();
+    }
+
+    private void drawStepRoute(int startIndex) {
+        clearPolylines();
+
+        new Thread(() -> {
+            RoadManager roadManager = new OSRMRoadManager(this, getPackageName());
+            ArrayList<GeoPoint> stepPoints = new ArrayList<>();
+            stepPoints.add(routePoints.get(startIndex));
+            stepPoints.add(routePoints.get(startIndex + 1));
+
+            Road road = roadManager.getRoad(stepPoints);
+            Polyline roadOverlay = RoadManager.buildRoadOverlay(road);
+            roadOverlay.setColor(Color.RED);
+            roadOverlay.setWidth(14f);
+
+            runOnUiThread(() -> {
+                mapView.getOverlays().add(roadOverlay);
+                mapView.getController().animateTo(routePoints.get(startIndex));
+                mapView.invalidate();
+            });
+        }).start();
+    }
+
+    private void clearPolylines() {
+        mapView.getOverlays().removeIf(overlay -> overlay instanceof Polyline);
+        mapView.invalidate();
+    }
+
+    private String formatDate(String dateStr) {
+        if (dateStr == null || dateStr.isEmpty()) return "N/A";
+        try {
+            SimpleDateFormat in = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
+            SimpleDateFormat out = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+            return out.format(in.parse(dateStr));
+        } catch (Exception e) {
+            return dateStr;
+        }
     }
 }
