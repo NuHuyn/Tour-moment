@@ -1,143 +1,137 @@
 <?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F1F8E9">
 
-    <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="20dp"
-        android:background="#E8F5E9">
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:layout_above="@id/bottomNavigation">
 
-        ```
-        <!-- Main content -->
-        <LinearLayout
-            android:orientation="vertical"
+        <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_above="@id/bottomNavigation"
-            android:padding="16dp">
-
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    android:id="@+id/txtWelcome"
-                    android:text="Welcome back"
-                    android:textSize="13sp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-
-                <ImageView
-                    android:id="@+id/imgProfile"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:src="@drawable/ic_person"
-                    android:layout_alignParentEnd="true"/>
-
-            </RelativeLayout>
-
+            android:layout_height="wrap_content">
             <TextView
-                android:text="Discover the Best Place"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:layout_marginTop="10dp"
+                android:id="@+id/txtWelcome"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-
-            <!--  SEARCH + FILTER -->
-            <RelativeLayout
-                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp">
+                android:text="Welcome back"
+                android:textSize="14sp"
+                android:textColor="#666666" />
+            <ImageView
+                android:id="@+id/imgProfile"
+                android:layout_width="35dp"
+                android:layout_height="35dp"
+                android:layout_alignParentEnd="true"
+                android:src="@drawable/ic_person"
+                android:scaleType="centerCrop" />
+        </RelativeLayout>
 
-                <!-- Ô search -->
-                <EditText
-                    android:id="@+id/edtSearch"
-                    android:layout_width="match_parent"
-                    android:layout_height="45dp"
-                    android:hint="Search locations"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="45dp"
-                    android:background="#EEEEEE"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Discover the Best Place"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#1B5E20"
+            android:layout_marginTop="8dp" />
 
-                <!-- Icon filter -->
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/chipGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="8dp"
-                    app:singleSelection="false">
-
-                    <com.google.android.material.chip.Chip
-                        android:text="Tất cả"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        style="@style/Widget.MaterialComponents.Chip.Choice"/>
-
-                    <com.google.android.material.chip.Chip
-                        android:text="Côn Đảo"
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
-                        style="@style/Widget.MaterialComponents.Chip.Choice"/>
-
-                    <com.google.android.material.chip.Chip
-                        android:text="Vũng Tàu"
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
-                        style="@style/Widget.MaterialComponents.Chip.Choice"/>
-
-                </com.google.android.material.chip.ChipGroup>
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/selectedGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="8dp"/>
-
-            </RelativeLayout>
-
-            <TextView
-                android:text="Popular"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:layout_marginTop="10dp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerPopular"
-                android:layout_width="match_parent"
-                android:layout_height="140dp"
-                android:layout_marginTop="10dp"/>
-
-            <TextView
-                android:text="Tours"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:layout_marginTop="20dp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-
-            <!-- RecyclerView tours -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerTours"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:layout_marginTop="10dp"/>
-
-        </LinearLayout>
-
-        <!-- Bottom Navigation -->
-        <com.google.android.material.bottomnavigation.BottomNavigationView
-            android:id="@+id/bottomNavigation"
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/searchLayout"
             android:layout_width="match_parent"
-            android:layout_height="70dp"
-            android:layout_alignParentBottom="true"
-            android:background="#FFFFFF"
-            app:itemIconTint="@null"
-            app:menu="@menu/bottom_menu"/>
-        ```
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:hintEnabled="false"
+            app:startIconDrawable="@android:drawable/ic_menu_search"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomEnd="12dp"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-    </RelativeLayout>
+            <EditText
+                android:id="@+id/edtSearch"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:hint="Search tour, destination..."
+                android:inputType="text"
+                android:padding="10dp"
+                android:background="@null"
+                android:imeOptions="actionSearch"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:layout_marginTop="12dp">
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleSelection="true">
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipAll"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tất cả"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:checked="true"/>
+                <com.google.android.material.chip.Chip
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Quy Nhơn"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"/>
+                <com.google.android.material.chip.Chip
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tây Ninh"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"/>
+                <com.google.android.material.chip.Chip
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cần Thơ"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"/>
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Popular"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp" />
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerPopular"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="All Tours"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp" />
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerTours"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="8dp" />
+    </LinearLayout>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="65dp"
+        android:layout_alignParentBottom="true"
+        android:background="#FFFFFF"
+        app:menu="@menu/bottom_menu" />
+</RelativeLayout>

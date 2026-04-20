@@ -32,13 +32,12 @@ router.post('/upload', upload.single('image'), (req, res) => {
     }
 });
 
-
 // Cập nhật thông tin Tour (Dùng cho updateTour trong Android)
 router.put("/:id", async (req, res) => {
     try {
         const updatedTour = await Tour.findByIdAndUpdate(
             req.params.id,
-            req.body, // Lấy toàn bộ dữ liệu mới từ Android gửi lên (bao gồm isShared)
+            req.body, // Nhận toàn bộ body bao gồm videoUrl nếu có
             { new: true }
         );
         res.status(200).json(updatedTour);
@@ -47,13 +46,10 @@ router.put("/:id", async (req, res) => {
     }
 });
 
-// --- MỚI: 3. LẤY TOUR CÁ NHÂN (Cho màn hình My Travel) ---
-// Route này sẽ trả về TẤT CẢ tour, kể cả tour có isShared = false
+// 3. LẤY TOUR CÁ NHÂN (Cho màn hình My Travel)
 router.get("/my-tours", async (req, res) => {
     try {
-        // Trong thực tế, bạn nên lọc theo authorId từ Token/Firebase
-        // Ở đây tôi lấy tất cả để đảm bảo bạn thấy được tour trong tab Completed
-        const myTours = await Tour.find().sort({ startDate: -1 });
+        const myTours = await Tour.find().sort({ createdAt: -1 }); // Sắp xếp theo tour mới tạo nhất
         res.json(myTours);
     } catch (err) {
         res.status(500).json({ message: "Lỗi lấy tour cá nhân: " + err.message });
@@ -63,7 +59,8 @@ router.get("/my-tours", async (req, res) => {
 // 4. TẠO TOUR MỚI
 router.post("/", async (req, res) => {
     try {
-        const { authorId, title, description, startDate, endDate, imageUrl, status, waypoints } = req.body;
+        // --- BỔ SUNG videoUrl vào đây ---
+        const { authorId, title, description, startDate, endDate, imageUrl, videoUrl, status, waypoints } = req.body;
         
         const newTour = new Tour({
             authorId,
@@ -72,8 +69,9 @@ router.post("/", async (req, res) => {
             startDate,
             endDate,
             imageUrl,
-            status: status || "Upcoming", // Mặc định là Upcoming nếu Android không gửi
-            isShared: false, // Mặc định tour mới tạo là riêng tư
+            videoUrl, // Lưu link video MP4 từ slide ảnh
+            status: status || "Upcoming",
+            isShared: false,
             waypoints: waypoints || []
         });
 
@@ -102,7 +100,7 @@ router.patch("/:tourId/waypoint", async (req, res) => {
                         },
                         arrivalDate,
                         note,
-                        photos: photos || [] // Thêm mảng ảnh cho từng điểm dừng
+                        photos: photos || [] 
                     }
                 }
             },
@@ -131,7 +129,7 @@ router.patch("/:id/share", async (req, res) => {
     try {
         const updatedTour = await Tour.findByIdAndUpdate(
             req.params.id,
-            { isShared: true }, // Luôn đặt thành true khi nhấn share
+            { isShared: true }, 
             { new: true }
         );
         res.status(200).json(updatedTour);
@@ -139,6 +137,5 @@ router.patch("/:id/share", async (req, res) => {
         res.status(500).json({ message: "Lỗi update: " + err.message });
     }
 });
-
 
 module.exports = router;

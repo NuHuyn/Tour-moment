@@ -2,7 +2,6 @@ package com.example.mycurrenttour;
 
 import android.content.Intent;
 import android.graphics.Color;
-import android.graphics.PorterDuff;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -68,11 +67,12 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Tour tour = tourList.get(position);
 
-
+        // Hiển thị thông tin cơ bản
         holder.txtTitle.setText(tour.getTitle() != null ? tour.getTitle() : "Self-guided trip");
         holder.txtPrice.setText("Total expense: $" + tour.getTotalPrice());
         holder.txtStartDate.setText("Start date: " + formatDate(tour.getStartDateString()));
 
+        // Load ảnh bìa tour
         Picasso.get()
                 .load(tour.getImageUrl())
                 .fit()
@@ -81,20 +81,27 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
                 .error(R.drawable.centralvietnam)
                 .into(holder.imgTour);
 
-
+        // Xử lý hiển thị các nút chức năng
         if (isHomePage) {
-
-            holder.btnShareToPublic.setVisibility(View.GONE);
             holder.btnMemorableVideo.setVisibility(View.GONE);
+            holder.btnShareToPublic.setVisibility(View.GONE);
         } else {
+            // Hiển thị nút Video Slideshow nếu có ảnh
+            if ((tour.getImageUrl() != null && !tour.getImageUrl().isEmpty()) ||
+                    (tour.getWaypoints() != null && !tour.getWaypoints().isEmpty())) {
+                holder.btnMemorableVideo.setVisibility(View.VISIBLE);
+                holder.btnMemorableVideo.setOnClickListener(v -> {
+                    Intent intent = new Intent(v.getContext(), VideoPlayerActivity.class);
+                    intent.putExtra("tour_item", tour);
+                    v.getContext().startActivity(intent);
+                });
+            } else {
+                holder.btnMemorableVideo.setVisibility(View.GONE);
+            }
 
+            // Hiển thị nút Share
             holder.btnShareToPublic.setVisibility(View.VISIBLE);
-            holder.btnMemorableVideo.setVisibility(View.VISIBLE);
-
-
             updateShareButtonUI(holder, tour.isShared());
-
-
             holder.btnShareToPublic.setOnClickListener(v -> {
                 if (!tour.isShared()) {
                     shareTourToPublic(tour, holder);
@@ -102,16 +109,9 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
                     Toast.makeText(v.getContext(), "This tour has already been shared!", Toast.LENGTH_SHORT).show();
                 }
             });
-
-
-            holder.btnMemorableVideo.setOnClickListener(v -> {
-                Intent intent = new Intent(v.getContext(), CreateVideoActivity.class);
-                intent.putExtra("tour_item", tour);
-                v.getContext().startActivity(intent);
-            });
         }
 
-
+        // Click vào item để xem chi tiết
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(v.getContext(), TourDetailActivity.class);
             intent.putExtra("tour_item", tour);
@@ -119,25 +119,22 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
         });
     }
 
+    // Hàm cập nhật màu sắc nút Share (Đã sửa lỗi setColorFilter)
     private void updateShareButtonUI(ViewHolder holder, boolean isShared) {
+        holder.btnShareToPublic.setBackgroundResource(R.drawable.bg_button_share);
         if (isShared) {
             holder.btnShareToPublic.setText("Shared");
             holder.btnShareToPublic.setTextColor(Color.WHITE);
-            holder.btnShareToPublic.setBackgroundResource(R.drawable.bg_button_share);
-            holder.btnShareToPublic.getBackground().setColorFilter(
-                    Color.parseColor("#2E7D32"), PorterDuff.Mode.SRC_IN);
+            holder.btnShareToPublic.getBackground().setTint(Color.parseColor("#2E7D32"));
         } else {
             holder.btnShareToPublic.setText("Share journey to public");
             holder.btnShareToPublic.setTextColor(Color.WHITE);
-            holder.btnShareToPublic.setBackgroundResource(R.drawable.bg_button_share);
-            holder.btnShareToPublic.getBackground().setColorFilter(
-                    Color.parseColor("#D32F2F"), PorterDuff.Mode.SRC_IN);
+            holder.btnShareToPublic.getBackground().setTint(Color.parseColor("#D32F2F"));
         }
     }
 
     private void shareTourToPublic(Tour tour, ViewHolder holder) {
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
-
         apiService.shareTour(tour.getId()).enqueue(new Callback<Tour>() {
             @Override
             public void onResponse(Call<Tour> call, Response<Tour> response) {
@@ -149,7 +146,6 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
                     Toast.makeText(holder.itemView.getContext(), "Server error: Unable to share", Toast.LENGTH_SHORT).show();
                 }
             }
-
             @Override
             public void onFailure(Call<Tour> call, Throwable t) {
                 Toast.makeText(holder.itemView.getContext(), "Network connection error", Toast.LENGTH_SHORT).show();

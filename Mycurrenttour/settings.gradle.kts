@@ -7,11 +7,15 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
+    // PREFER_SETTINGS giúp cài đặt ở đây ghi đè lên các file build.gradle khác
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://jitpack.io") } // Cửa ngõ để tải BonusPack
+        // Cú pháp chuẩn cho file .gradle (Groovy)
+        maven {
+            url = uri("https://jitpack.io")
+        }
     }
 }
 

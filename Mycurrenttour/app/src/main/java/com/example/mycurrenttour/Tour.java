@@ -13,6 +13,9 @@ public class Tour implements Serializable {
     private String description;
     private String imageUrl;
 
+    // --- TRƯỜNG DỮ LIỆU MỚI ĐỂ LƯU VIDEO ---
+    private String videoUrl;
+
     @SerializedName("isShared")
     private boolean isShared;
 
@@ -20,6 +23,10 @@ public class Tour implements Serializable {
     private String endDate;
     private List<Waypoint> waypoints;
     private String status;
+
+    // --- GETTER & SETTER CHO VIDEO ---
+    public String getVideoUrl() { return videoUrl; }
+    public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
 
     public boolean isShared() { return isShared; }
     public void setShared(boolean shared) { this.isShared = shared; }
@@ -57,7 +64,7 @@ public class Tour implements Serializable {
     public String getStartDateString() { return startDate; }
     public String getEndDateString() { return endDate; }
 
-    // --- LỚP WAYPOINT (ĐÃ SỬA VỊ TRÍ IS_EXPANDED) ---
+    // --- LỚP WAYPOINT ---
     public static class Waypoint implements Serializable {
         private String locationName;
         private String note;
@@ -65,7 +72,7 @@ public class Tour implements Serializable {
         private List<String> photos = new ArrayList<>();
         private Coordinate coordinate;
 
-        // BIẾN NÀY PHẢI NẰM Ở ĐÂY ĐỂ ADAPTER KHÔNG BÁO LỖI ĐỎ
+        // Dùng transient để GSON không cố gắng serialize biến trạng thái UI này
         private transient boolean isExpanded = false;
 
         public boolean isExpanded() { return isExpanded; }
@@ -89,6 +96,7 @@ public class Tour implements Serializable {
         }
     }
 
+    // --- LỚP TỌA ĐỘ ---
     public static class Coordinate implements Serializable {
         private String type;
         private List<Double> coordinates;

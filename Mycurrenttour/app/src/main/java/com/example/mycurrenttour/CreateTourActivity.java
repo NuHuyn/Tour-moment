@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -49,6 +50,9 @@ public class CreateTourActivity extends AppCompatActivity {
     private ExtendedFloatingActionButton btnAddWaypoint;
     private View layoutPlaceholder;
 
+    // --- BỔ SUNG CHECKBOX VIDEO ---
+    private CheckBox cbCreateVideo;
+
     private Date startDate = new Date();
     private Date endDate = new Date();
     private Uri pendingCoverUri;
@@ -78,7 +82,7 @@ public class CreateTourActivity extends AppCompatActivity {
         });
 
         btnAddWaypoint.setOnClickListener(v -> addWaypointField());
-        addWaypointField(); // Mặc định tạo 1 điểm đầu tiên
+        addWaypointField();
 
         btnSaveAndStart.setOnClickListener(v -> startSavingProcess());
     }
@@ -95,6 +99,9 @@ public class CreateTourActivity extends AppCompatActivity {
         waypointContainer = findViewById(R.id.waypointContainer);
         btnAddWaypoint = findViewById(R.id.btnAddWaypoint);
         layoutPlaceholder = findViewById(R.id.layoutPlaceholder);
+
+        // Khởi tạo CheckBox
+        cbCreateVideo = findViewById(R.id.cbCreateVideo);
 
         btnPickStartDate.setText(displayFormat.format(startDate));
         btnPickEndDate.setText(displayFormat.format(endDate));
@@ -115,7 +122,7 @@ public class CreateTourActivity extends AppCompatActivity {
         }
 
         btnSaveAndStart.setEnabled(false);
-        btnSaveAndStart.setText("Processing...");
+        btnSaveAndStart.setText("Creating memory...");
 
         if (pendingCoverUri != null) {
             uploadCoverThenSave(title);
@@ -137,7 +144,7 @@ public class CreateTourActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     saveFullTour(title, response.body().getImageUrl());
                 } else {
-                    Toast.makeText(CreateTourActivity.this, "Cover image upload error", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(CreateTourActivity.this, "Lỗi upload ảnh bìa", Toast.LENGTH_SHORT).show();
                     resetSaveButton();
                 }
             }
@@ -155,11 +162,14 @@ public class CreateTourActivity extends AppCompatActivity {
         tour.setEndDate(isoFormat.format(endDate));
         tour.setStatus(spnStatus.getSelectedItem().toString());
 
+        // Danh sách ảnh để tạo video
+        ArrayList<String> videoPhotos = new ArrayList<>();
+        if (!coverUrl.isEmpty()) videoPhotos.add(coverUrl);
+
         List<Tour.Waypoint> waypointList = new ArrayList<>();
         for (int i = 0; i < waypointContainer.getChildCount(); i++) {
             View v = waypointContainer.getChildAt(i);
 
-            // Find new input views
             TextInputEditText edtWpName = v.findViewById(R.id.edtWpLocationName);
             TextInputEditText edtWpPrice = v.findViewById(R.id.edtWpPrice);
             TextInputEditText edtWpNote = v.findViewById(R.id.edtWpNote);
@@ -171,17 +181,16 @@ public class CreateTourActivity extends AppCompatActivity {
             wp.setLocationName(edtWpName.getText().toString().trim());
             wp.setNote(edtWpNote.getText().toString().trim());
 
-            // Handle price
             String pStr = edtWpPrice.getText().toString().trim();
             wp.setPrice(pStr.isEmpty() ? 0 : Integer.parseInt(pStr));
 
-            // --- GET IMAGE URL FROM TAG ---
             if (imgWp.getTag() != null) {
                 String wpUrl = (String) imgWp.getTag();
                 wp.setPhotos(Arrays.asList(wpUrl));
+                // Thêm vào danh sách tạo video
+                videoPhotos.add(wpUrl);
             }
 
-            // Handle coordinates [lon, lat]
             try {
                 double lat = Double.parseDouble(edtLat.getText().toString());
                 double lng = Double.parseDouble(edtLng.getText().toString());
@@ -195,11 +204,19 @@ public class CreateTourActivity extends AppCompatActivity {
         }
         tour.setWaypoints(waypointList);
 
+        // --- XỬ LÝ VIDEO ---
+        if (cbCreateVideo.isChecked() && !videoPhotos.isEmpty()) {
+            // Giả lập link video bằng ảnh đầu tiên hoặc một logic tạo từ server
+            // Trong thực tế, server sẽ nhận mảng videoPhotos để ghép thành MP4
+            tour.setVideoUrl(videoPhotos.get(0));
+            Log.d("CreateTour", "Video will be created with " + videoPhotos.size() + " photos");
+        }
+
         apiService.createTour(tour).enqueue(new Callback<Tour>() {
             @Override
             public void onResponse(Call<Tour> call, Response<Tour> response) {
                 if (response.isSuccessful()) {
-                    Toast.makeText(CreateTourActivity.this, "Saved successfully!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(CreateTourActivity.this, "Tạo Tour thành công!", Toast.LENGTH_SHORT).show();
                     finish();
                 } else { resetSaveButton(); }
             }
@@ -219,9 +236,8 @@ public class CreateTourActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<ApiService.UploadResponse> call, Response<ApiService.UploadResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    // SAVE URL INTO TAG TO RETRIEVE WHEN SAVING TOUR
                     targetImageView.setTag(response.body().getImageUrl());
-                    Toast.makeText(CreateTourActivity.this, "Waypoint image uploaded successfully", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(CreateTourActivity.this, "Đã tải ảnh chặng dừng", Toast.LENGTH_SHORT).show();
                 }
             }
             @Override
@@ -268,8 +284,6 @@ public class CreateTourActivity extends AppCompatActivity {
                         View parent = (View) currentWpImageView.getParent();
                         View placeholder = parent.findViewById(R.id.wpPlaceholder);
                         if (placeholder != null) placeholder.setVisibility(View.GONE);
-
-
                         uploadWaypointImage(uri, currentWpImageView);
                     }
                 }
