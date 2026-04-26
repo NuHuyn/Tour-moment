@@ -65,13 +65,12 @@ public class MyTourActivity extends AppCompatActivity {
         if (user == null) return;
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
         
-        // Truyền thêm currentFilter để fix lỗi "actual and formal argument lists differ in length"
+
         apiService.getMyTours(user.getUid(), currentFilter).enqueue(new Callback<List<Tour>>() {
             @Override
             public void onResponse(Call<List<Tour>> call, Response<List<Tour>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     allToursFromApi = response.body();
-                    // Cập nhật danh sách lên giao diện
                     adapter.updateList(allToursFromApi);
                     
                     if (allToursFromApi.isEmpty()) {
@@ -97,7 +96,6 @@ public class MyTourActivity extends AppCompatActivity {
             String tourStatus = (tour.getStatus() != null) ? tour.getStatus().trim() : "";
 
             if (status.equalsIgnoreCase("Completed")) {
-                // Chấp nhận cả "Completed" và "completed"
                 if (tourStatus.equalsIgnoreCase("Completed") || tourStatus.equalsIgnoreCase("completed")) {
                     filteredList.add(tour);
                 }
@@ -107,8 +105,6 @@ public class MyTourActivity extends AppCompatActivity {
                 }
             }
         }
-
-        // QUAN TRỌNG: Cập nhật adapter ngoài vòng lặp để app không bị treo
         adapter.updateList(filteredList);
         if (filteredList.isEmpty()) {
             Toast.makeText(this, "No " + status + " tours found.", Toast.LENGTH_SHORT).show();

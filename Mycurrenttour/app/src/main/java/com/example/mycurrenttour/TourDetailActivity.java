@@ -36,8 +36,8 @@ import java.util.Locale;
 public class TourDetailActivity extends AppCompatActivity {
 
     private ImageView imgTour;
-    private ViewPager2 viewPagerSlideshow; // THÊM DÒNG NÀY
-    private ImageButton btnPlaySlideshow; // THÊM DÒNG NÀY
+    private ViewPager2 viewPagerSlideshow;
+    private ImageButton btnPlaySlideshow;
 
     private LinearLayout btnWholeRoute;
     private TextView txtTitle, txtPrice, txtDescription;
@@ -50,7 +50,7 @@ public class TourDetailActivity extends AppCompatActivity {
     private List<GeoPoint> routePoints = new ArrayList<>();
     private List<Tour.Waypoint> tourWaypoints = new ArrayList<>();
 
-    // Biến cho Slideshow
+
     private List<String> photos = new ArrayList<>();
     private Handler sliderHandler = new Handler(Looper.getMainLooper());
     private MediaPlayer mediaPlayer;
@@ -70,10 +70,8 @@ public class TourDetailActivity extends AppCompatActivity {
             displayTourData(tour);
             setupWaypointList();
 
-            // Chuẩn bị danh sách ảnh cho slideshow
             preparePhotos(tour);
 
-            // Sự kiện nhấn nút Play Video
             btnPlaySlideshow.setOnClickListener(v -> startInternalSlideshow());
         } else {
             Toast.makeText(this, "Invalid data!", Toast.LENGTH_SHORT).show();
@@ -83,9 +81,8 @@ public class TourDetailActivity extends AppCompatActivity {
 
     private void initViews() {
         imgTour = findViewById(R.id.imgTourDetail);
-        viewPagerSlideshow = findViewById(R.id.viewPagerDetailSlideshow); // Khai báo trong XML
-        btnPlaySlideshow = findViewById(R.id.btnPlaySlideshow); // Khai báo trong XML
-
+        viewPagerSlideshow = findViewById(R.id.viewPagerDetailSlideshow);
+        btnPlaySlideshow = findViewById(R.id.btnPlaySlideshow);
         txtTitle = findViewById(R.id.txtTitleDetail);
         txtPrice = findViewById(R.id.txtPriceDetail);
         txtDescription = findViewById(R.id.txtDescription);
@@ -114,7 +111,6 @@ public class TourDetailActivity extends AppCompatActivity {
             return;
         }
 
-        // Làm mờ nhẹ ảnh bìa ở dưới để tạo chiều sâu
         imgTour.setAlpha(0.4f);
 
         btnPlaySlideshow.setVisibility(View.GONE);
@@ -123,17 +119,14 @@ public class TourDetailActivity extends AppCompatActivity {
         SlideshowAdapter adapter = new SlideshowAdapter(photos);
         viewPagerSlideshow.setAdapter(adapter);
 
-        // Tối ưu bộ nhớ: Load trước các slide để không bị khựng
         viewPagerSlideshow.setOffscreenPageLimit(1);
 
-        // HIỆU ỨNG CINEMATIC (KEN BURNS + CROSS-FADE)
         viewPagerSlideshow.setPageTransformer((page, position) -> {
             page.setTranslationX(-position * page.getWidth());
 
             if (position < -1 || position > 1) {
                 page.setAlpha(0f);
             } else {
-                // Duy trì Alpha tối thiểu 0.01 thay vì 0 để tránh hiện tượng màn hình đen/trắng khi chuyển
                 float alpha = Math.max(0.01f, 1 - Math.abs(position));
                 page.setAlpha(alpha);
 
@@ -145,9 +138,7 @@ public class TourDetailActivity extends AppCompatActivity {
 
         initMusic();
 
-        // Xóa các callback cũ nếu có để tránh chạy chồng chéo
         sliderHandler.removeCallbacks(sliderRunnable);
-        // Bắt đầu chạy sau 4 giây để ảnh đầu tiên kịp hiển thị mượt mà
         sliderHandler.postDelayed(sliderRunnable, 4000);
     }
 
@@ -156,7 +147,6 @@ public class TourDetailActivity extends AppCompatActivity {
         public void run() {
             if (viewPagerSlideshow.getAdapter() != null && photos.size() > 1) {
                 int nextItem = (viewPagerSlideshow.getCurrentItem() + 1) % photos.size();
-                // true: sử dụng hiệu ứng trượt của ViewPager2 kết hợp với Transformer chúng ta đã viết
                 viewPagerSlideshow.setCurrentItem(nextItem, true);
                 sliderHandler.postDelayed(this, 4000);
             }
@@ -201,7 +191,6 @@ public class TourDetailActivity extends AppCompatActivity {
 
     private void setupWaypointList() {
         recyclerWaypoints.setLayoutManager(new LinearLayoutManager(this));
-        // Pass 'false' because this is NOT the Ongoing Map screen
         waypointAdapter = new WaypointViewAdapter(tourWaypoints, false, position -> {
             if (position < routePoints.size() - 1) {
                 drawStepRoute(position);

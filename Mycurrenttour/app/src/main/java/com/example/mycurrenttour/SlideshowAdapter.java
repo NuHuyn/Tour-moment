@@ -24,20 +24,18 @@ public class SlideshowAdapter extends RecyclerView.Adapter<SlideshowAdapter.View
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // Đảm bảo item_slide_image.xml sử dụng match_parent cho cả 2 chiều
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_slide_image, parent, false);
         return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        // Sử dụng Glide để tối ưu bộ nhớ và hiệu ứng mờ dần (CrossFade)
         Glide.with(holder.itemView.getContext())
                 .load(imageUrls.get(position))
                 .apply(new RequestOptions()
                         .centerCrop()
-                        .dontAnimate() // Quan trọng: Bỏ hiệu ứng mặc định của Glide để dùng Transformer của mình
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)) // Lưu vào bộ nhớ máy để lần sau không phải load lại
+                        .dontAnimate()
+                        .diskCacheStrategy(DiskCacheStrategy.ALL))
                 .into(holder.imageView);
     }
 

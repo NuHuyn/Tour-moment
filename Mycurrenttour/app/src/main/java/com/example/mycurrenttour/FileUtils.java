@@ -13,23 +13,22 @@ public class FileUtils {
         File destinationFile = new File(context.getCacheDir(), "temp_image_" + System.currentTimeMillis() + ".jpg");
         try (InputStream inputStream = context.getContentResolver().openInputStream(uri)) {
 
-            // 1. Chỉ đọc thông tin kích thước (không nạp cả ảnh vào RAM)
+
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
             BitmapFactory.decodeStream(inputStream, null, options);
 
-            // 2. Tính toán tỷ lệ giảm kích thước (InSampleSize)
-            // Nếu ảnh quá lớn (ví dụ > 1000px), ta giảm xuống để xử lý cho nhanh
+
             int reqWidth = 1024;
             int reqHeight = 1024;
             options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
             options.inJustDecodeBounds = false;
 
-            // 3. Đọc lại ảnh đã được thu nhỏ
+
             InputStream is = context.getContentResolver().openInputStream(uri);
             Bitmap bitmap = BitmapFactory.decodeStream(is, null, options);
 
-            // 4. Nén và ghi ra file
+
             FileOutputStream out = new FileOutputStream(destinationFile);
             bitmap.compress(Bitmap.CompressFormat.JPEG, 70, out);
             out.flush();
@@ -42,7 +41,7 @@ public class FileUtils {
         }
     }
 
-    // Hàm phụ tính toán tỷ lệ nén để không gây tốn RAM
+
     private static int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
         final int height = options.outHeight;
         final int width = options.outWidth;

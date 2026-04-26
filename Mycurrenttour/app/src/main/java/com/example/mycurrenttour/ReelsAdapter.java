@@ -28,7 +28,6 @@ public class ReelsAdapter extends RecyclerView.Adapter<ReelsAdapter.ViewHolder> 
                 .inflate(R.layout.item_reel_video, parent, false);
         ViewHolder holder = new ViewHolder(view);
 
-        // TỐI ƯU: Thiết lập Transformer tại đây để không phải chạy lại trong onBind
         holder.viewPagerReel.setPageTransformer((page, pos) -> {
             page.setTranslationX(-pos * page.getWidth());
             if (pos < -1 || pos > 1) {
@@ -51,7 +50,6 @@ public class ReelsAdapter extends RecyclerView.Adapter<ReelsAdapter.ViewHolder> 
         holder.txtTitle.setText(tour.getTitle() != null ? tour.getTitle() : "Exciting trip");
         holder.txtTourNameLink.setText("View detail: " + tour.getTitle());
 
-        // 1. Chuẩn bị ảnh
         List<String> photos = new ArrayList<>();
         if (tour.getImageUrl() != null && !tour.getImageUrl().isEmpty()) {
             photos.add(tour.getImageUrl());
@@ -59,7 +57,6 @@ public class ReelsAdapter extends RecyclerView.Adapter<ReelsAdapter.ViewHolder> 
 
         if (tour.getWaypoints() != null) {
             for (Tour.Waypoint wp : tour.getWaypoints()) {
-                // Kiểm tra an toàn trước khi addAll
                 List<String> wpPhotos = wp.getPhotos();
                 if (wpPhotos != null && !wpPhotos.isEmpty()) {
                     photos.addAll(wpPhotos);
@@ -67,12 +64,10 @@ public class ReelsAdapter extends RecyclerView.Adapter<ReelsAdapter.ViewHolder> 
             }
         }
 
-        // 2. Thiết lập Slideshow
         SlideshowAdapter slideshowAdapter = new SlideshowAdapter(photos);
         holder.viewPagerReel.setAdapter(slideshowAdapter);
         holder.viewPagerReel.setOffscreenPageLimit(3);
 
-        // 3. Chạy slider tự động
         holder.startAutoSlider(photos.size());
 
         holder.layoutTourLink.setOnClickListener(v -> {
@@ -87,7 +82,6 @@ public class ReelsAdapter extends RecyclerView.Adapter<ReelsAdapter.ViewHolder> 
         return (list != null) ? list.size() : 0;
     }
 
-    // QUAN TRỌNG: Dừng slider khi item bị cuộn đi để giải phóng bộ nhớ
     @Override
     public void onViewRecycled(@NonNull ViewHolder holder) {
         super.onViewRecycled(holder);
@@ -119,7 +113,7 @@ public class ReelsAdapter extends RecyclerView.Adapter<ReelsAdapter.ViewHolder> 
                 public void run() {
                     if (viewPagerReel != null && viewPagerReel.getAdapter() != null) {
                         int currentItem = viewPagerReel.getCurrentItem();
-                        int nextItem = (currentItem + 1) % size; // Chạy lặp lại (Loop) cho giống Reel
+                        int nextItem = (currentItem + 1) % size;
                         viewPagerReel.setCurrentItem(nextItem, true);
                         handler.postDelayed(this, 3500);
                     }

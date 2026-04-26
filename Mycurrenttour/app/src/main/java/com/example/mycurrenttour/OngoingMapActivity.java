@@ -37,7 +37,6 @@ public class OngoingMapActivity extends AppCompatActivity {
         Configuration.getInstance().setUserAgentValue(getPackageName());
         setContentView(R.layout.activity_ongoing_map);
 
-        // Receive tour safely
         tour = (Tour) getIntent().getSerializableExtra("tour_item");
         if (tour == null) {
             Toast.makeText(this, "Tour data not found", Toast.LENGTH_SHORT).show();
@@ -63,7 +62,6 @@ public class OngoingMapActivity extends AppCompatActivity {
     }
 
     private void setupMap() {
-        // High stability mode for Emulator
         map.setLayerType(View.LAYER_TYPE_SOFTWARE, null); 
         map.setMultiTouchControls(true); 
         map.getController().setZoom(14.0); 
@@ -76,8 +74,6 @@ public class OngoingMapActivity extends AppCompatActivity {
         
         recyclerWaypoints.setLayoutManager(new LinearLayoutManager(this));
         adapter = new WaypointViewAdapter(tour.getWaypoints(), true, position -> {
-            // Draw specific road segment from My Location/Previous Stop to current stop
-            // routePoints: [0] MyLocation, [1] Step 1, [2] Step 2...
             if (position + 1 < routePoints.size()) {
                 drawStepRoad(position, position + 1);
                 map.getController().animateTo(routePoints.get(position + 1));
@@ -93,19 +89,16 @@ public class OngoingMapActivity extends AppCompatActivity {
     }
 
     private void initRouteOnMap() {
-        // Use your fixed coordinates as the start
         GeoPoint startPoint = new GeoPoint(10.870587770354202, 106.80209416657385);
         routePoints.clear();
         routePoints.add(startPoint);
 
-        // Add Marker for starting position
         Marker startMarker = new Marker(map);
         startMarker.setPosition(startPoint);
         startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
         startMarker.setTitle("My Location");
         map.getOverlays().add(startMarker);
 
-        // Add all stops from tour
         if (tour.getWaypoints() != null) {
             for (int i = 0; i < tour.getWaypoints().size(); i++) {
                 Tour.Waypoint wp = tour.getWaypoints().get(i);
@@ -123,7 +116,6 @@ public class OngoingMapActivity extends AppCompatActivity {
             }
         }
 
-        // Draw the full meandering road initially
         drawFullDetailedRoad();
         map.getController().setCenter(startPoint);
     }
@@ -153,7 +145,6 @@ public class OngoingMapActivity extends AppCompatActivity {
     }
 
     private void drawStepRoad(int startIdx, int endIdx) {
-        // Highlight current chặng in Blue
         new Thread(() -> {
             try {
                 RoadManager roadManager = new OSRMRoadManager(getApplicationContext(), getPackageName());
@@ -169,7 +160,6 @@ public class OngoingMapActivity extends AppCompatActivity {
 
                     runOnUiThread(() -> {
                         if (map != null) {
-                            // Remove previous blue lines if any
                             map.getOverlays().removeIf(o -> o instanceof Polyline && ((Polyline) o).getOutlinePaint().getColor() == Color.BLUE);
                             map.getOverlays().add(stepOverlay);
                             map.invalidate();

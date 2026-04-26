@@ -27,12 +27,11 @@ public class ReelsActivity extends AppCompatActivity {
         recyclerReels = findViewById(R.id.recyclerFavorite);
         recyclerReels.setLayoutManager(new LinearLayoutManager(this));
 
-        // --- THÊM CÁC DÒNG NÀY ĐỂ MƯỢT HƠN ---
+
         recyclerReels.setHasFixedSize(true);
-        recyclerReels.setItemViewCacheSize(10); // Giữ lại 10 item trong bộ nhớ đệm
+        recyclerReels.setItemViewCacheSize(10);
         recyclerReels.setDrawingCacheEnabled(true);
         recyclerReels.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
-        // -------------------------------------
 
         PagerSnapHelper snapHelper = new PagerSnapHelper();
         snapHelper.attachToRecyclerView(recyclerReels);

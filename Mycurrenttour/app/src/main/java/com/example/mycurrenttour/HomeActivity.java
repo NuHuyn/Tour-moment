@@ -56,21 +56,18 @@ public class HomeActivity extends AppCompatActivity {
         recyclerPopular = findViewById(R.id.recyclerPopular);
         recyclerTours = findViewById(R.id.recyclerTours);
 
-        // Thiết lập RecyclerView
         recyclerPopular.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         recyclerTours.setLayoutManager(new GridLayoutManager(this, 2));
 
         adapter = new TourAdapter(new ArrayList<>(), true);
         recyclerTours.setAdapter(adapter);
 
-        // Xử lý Profile
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null && user.getPhotoUrl() != null) {
             Picasso.get().load(user.getPhotoUrl()).into(iconProfile);
         }
         iconProfile.setOnClickListener(v -> showLogoutDialog());
 
-        // LOGIC TÌM KIẾM THEO CHỮ NHẬP
         edtSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -82,7 +79,6 @@ public class HomeActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {}
         });
 
-        // LOGIC TÌM KIẾM QUA CHIP (Gợi ý nhanh)
         chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (checkedIds.isEmpty()) {
                 filterTours("");
@@ -108,10 +104,8 @@ public class HomeActivity extends AppCompatActivity {
 
         for (Tour t : originalList) {
             boolean isMatch = false;
-            // Khớp tên Tour
             if (t.getTitle() != null && t.getTitle().toLowerCase().contains(lowerQuery)) isMatch = true;
 
-            // Khớp địa danh trong Waypoints
             if (!isMatch && t.getWaypoints() != null) {
                 for (Tour.Waypoint wp : t.getWaypoints()) {
                     if (wp.getLocationName() != null && wp.getLocationName().toLowerCase().contains(lowerQuery)) {
@@ -134,7 +128,6 @@ public class HomeActivity extends AppCompatActivity {
                     originalList = response.body();
                     adapter.updateList(originalList);
 
-                    // Hiển thị danh sách Popular (lấy 4 tour đầu)
                     List<Tour> popularList = originalList.subList(0, Math.min(originalList.size(), 4));
                     popularAdapter = new PopularAdapter(HomeActivity.this, popularList);
                     recyclerPopular.setAdapter(popularAdapter);

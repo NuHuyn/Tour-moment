@@ -161,12 +161,10 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
     }
 
     private void startJourney(Tour tour, View v) {
-        // Tối ưu: Chuyển màn hình ngay lập tức để người dùng không phải đợi API
         Intent intent = new Intent(v.getContext(), OngoingMapActivity.class);
         intent.putExtra("tour_item", tour);
         v.getContext().startActivity(intent);
 
-        // Cập nhật trạng thái ngầm
         tour.setStatus("Ongoing");
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
         apiService.updateTour(tour.getId(), tour).enqueue(new Callback<Tour>() {
