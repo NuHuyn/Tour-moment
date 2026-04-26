@@ -50,21 +50,33 @@ public class MyTourActivity extends AppCompatActivity {
 
     private void setupClickListeners() {
         btnTrip.setOnClickListener(v -> startActivity(new Intent(this, CreateTourActivity.class)));
-        btnUpcoming.setOnClickListener(v -> { currentFilter = "Upcoming"; filterByStatus("Upcoming"); });
-        btnOngoing.setOnClickListener(v -> { currentFilter = "Ongoing"; filterByStatus("Ongoing"); });
-        btnCompleted.setOnClickListener(v -> { currentFilter = "Completed"; filterByStatus("Completed"); });
+        btnUpcoming.setOnClickListener(v -> switchFilter("Upcoming"));
+        btnOngoing.setOnClickListener(v -> switchFilter("Ongoing"));
+        btnCompleted.setOnClickListener(v -> switchFilter("Completed"));
+    }
+
+    public void switchFilter(String status) {
+        this.currentFilter = status;
+        loadMyTours();
     }
 
     private void loadMyTours() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) return;
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
-        apiService.getMyTours(user.getUid()).enqueue(new Callback<List<Tour>>() {
+        
+        // Truyền thêm currentFilter để fix lỗi "actual and formal argument lists differ in length"
+        apiService.getMyTours(user.getUid(), currentFilter).enqueue(new Callback<List<Tour>>() {
             @Override
             public void onResponse(Call<List<Tour>> call, Response<List<Tour>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     allToursFromApi = response.body();
-                    filterByStatus(currentFilter);
+                    // Cập nhật danh sách lên giao diện
+                    adapter.updateList(allToursFromApi);
+                    
+                    if (allToursFromApi.isEmpty()) {
+                        Toast.makeText(MyTourActivity.this, "No " + currentFilter + " tours found.", Toast.LENGTH_SHORT).show();
+                    }
                 } else {
                     Log.e("API_ERROR", "Response failed: " + response.code());
                 }
@@ -72,6 +84,7 @@ public class MyTourActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<List<Tour>> call, Throwable t) {
                 Log.e("API_ERROR", "Failure: " + t.getMessage());
+                Toast.makeText(MyTourActivity.this, "Network error", Toast.LENGTH_SHORT).show();
             }
         });
     }

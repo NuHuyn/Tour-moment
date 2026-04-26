@@ -192,7 +192,7 @@ public class CreateTourActivity extends AppCompatActivity {
         tour.setTitle(title);
         tour.setDescription(edtTourDesc.getText().toString().trim());
         tour.setImageUrl(coverUrl);
-        tour.setAuthorIdString(user.getUid());
+        tour.setAuthorId(user.getUid());
         tour.setStatus(spnStatus.getSelectedItem().toString());
         tour.setStartDate(isoFormat.format(startDate));
         tour.setEndDate(isoFormat.format(endDate));

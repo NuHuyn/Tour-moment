@@ -201,7 +201,8 @@ public class TourDetailActivity extends AppCompatActivity {
 
     private void setupWaypointList() {
         recyclerWaypoints.setLayoutManager(new LinearLayoutManager(this));
-        waypointAdapter = new WaypointViewAdapter(tourWaypoints, position -> {
+        // Pass 'false' because this is NOT the Ongoing Map screen
+        waypointAdapter = new WaypointViewAdapter(tourWaypoints, false, position -> {
             if (position < routePoints.size() - 1) {
                 drawStepRoute(position);
             } else {

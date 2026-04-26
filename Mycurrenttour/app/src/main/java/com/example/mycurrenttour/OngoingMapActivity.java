@@ -1,13 +1,11 @@
 package com.example.mycurrenttour;
 
-import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -39,6 +37,7 @@ public class OngoingMapActivity extends AppCompatActivity {
         Configuration.getInstance().setUserAgentValue(getPackageName());
         setContentView(R.layout.activity_ongoing_map);
 
+        // Receive tour safely
         tour = (Tour) getIntent().getSerializableExtra("tour_item");
         if (tour == null) {
             Toast.makeText(this, "Tour data not found", Toast.LENGTH_SHORT).show();
@@ -53,8 +52,7 @@ public class OngoingMapActivity extends AppCompatActivity {
 
         findViewById(R.id.btnBackFromMap).setOnClickListener(v -> finish());
         findViewById(R.id.btnCompleteStep).setOnClickListener(v -> {
-            Toast.makeText(this, "Congratulations! You have completed this journey.", Toast.LENGTH_SHORT).show();
-            finish();
+            Toast.makeText(this, "Congratulations! Journey point completed.", Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -65,21 +63,23 @@ public class OngoingMapActivity extends AppCompatActivity {
     }
 
     private void setupMap() {
-        // --- ULTRA LIGHTWEIGHT CONFIG FOR EMULATOR ---
+        // High stability mode for Emulator
         map.setLayerType(View.LAYER_TYPE_SOFTWARE, null); 
         map.setMultiTouchControls(true); 
-        map.getController().setZoom(13.0); 
+        map.getController().setZoom(14.0); 
         
-        initStaticRoute();
+        initRouteOnMap();
     }
 
     private void setupWaypointList() {
+        if (tour.getWaypoints() == null) return;
+        
         recyclerWaypoints.setLayoutManager(new LinearLayoutManager(this));
-        // Pass 'true' for isOngoing
         adapter = new WaypointViewAdapter(tour.getWaypoints(), true, position -> {
-            // routePoints index 0 is My Location, index 1 is Waypoint 1, etc.
+            // Draw specific road segment from My Location/Previous Stop to current stop
+            // routePoints: [0] MyLocation, [1] Step 1, [2] Step 2...
             if (position + 1 < routePoints.size()) {
-                drawStepRoute(position, position + 1);
+                drawStepRoad(position, position + 1);
                 map.getController().animateTo(routePoints.get(position + 1));
             }
         });
@@ -87,37 +87,35 @@ public class OngoingMapActivity extends AppCompatActivity {
     }
 
     private void displayTourInfo() {
-        if (tour != null) {
+        if (tour != null && txtTitle != null) {
             txtTitle.setText(tour.getTitle());
         }
     }
 
-    private void initStaticRoute() {
-        // 1. Fixed position (Starting point)
+    private void initRouteOnMap() {
+        // Use your fixed coordinates as the start
         GeoPoint startPoint = new GeoPoint(10.870587770354202, 106.80209416657385);
         routePoints.clear();
         routePoints.add(startPoint);
 
-        // Marker for my location
+        // Add Marker for starting position
         Marker startMarker = new Marker(map);
         startMarker.setPosition(startPoint);
         startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
         startMarker.setTitle("My Location");
         map.getOverlays().add(startMarker);
 
-        // 2. Add all stops and collect points
+        // Add all stops from tour
         if (tour.getWaypoints() != null) {
             for (int i = 0; i < tour.getWaypoints().size(); i++) {
                 Tour.Waypoint wp = tour.getWaypoints().get(i);
-                if (wp.getCoordinate() != null) {
-                    GeoPoint wpPoint = new GeoPoint(
-                            wp.getCoordinate().getCoordinates().get(1),
-                            wp.getCoordinate().getCoordinates().get(0)
-                    );
-                    routePoints.add(wpPoint);
+                if (wp.getCoordinate() != null && wp.getCoordinate().getCoordinates() != null) {
+                    List<Double> coords = wp.getCoordinate().getCoordinates();
+                    GeoPoint stopPoint = new GeoPoint(coords.get(1), coords.get(0));
+                    routePoints.add(stopPoint);
 
                     Marker m = new Marker(map);
-                    m.setPosition(wpPoint);
+                    m.setPosition(stopPoint);
                     m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
                     m.setTitle("Step " + (i + 1) + ": " + wp.getLocationName());
                     map.getOverlays().add(m);
@@ -125,18 +123,16 @@ public class OngoingMapActivity extends AppCompatActivity {
             }
         }
 
-        // 3. Draw the full detailed road initially
-        drawFullRoute();
-
+        // Draw the full meandering road initially
+        drawFullDetailedRoad();
         map.getController().setCenter(startPoint);
-        map.invalidate();
     }
 
-    private void drawFullRoute() {
+    private void drawFullDetailedRoad() {
         if (routePoints.size() < 2) return;
         new Thread(() -> {
             try {
-                RoadManager roadManager = new OSRMRoadManager(this, getPackageName());
+                RoadManager roadManager = new OSRMRoadManager(getApplicationContext(), getPackageName());
                 Road road = roadManager.getRoad(new ArrayList<>(routePoints));
                 if (road.mStatus == Road.STATUS_OK) {
                     Polyline roadOverlay = RoadManager.buildRoadOverlay(road);
@@ -144,8 +140,10 @@ public class OngoingMapActivity extends AppCompatActivity {
                     roadOverlay.getOutlinePaint().setStrokeWidth(10f);
 
                     runOnUiThread(() -> {
-                        map.getOverlays().add(roadOverlay);
-                        map.invalidate();
+                        if (map != null) {
+                            map.getOverlays().add(roadOverlay);
+                            map.invalidate();
+                        }
                     });
                 }
             } catch (Exception e) {
@@ -154,26 +152,28 @@ public class OngoingMapActivity extends AppCompatActivity {
         }).start();
     }
 
-    private void drawStepRoute(int startIndex, int endIndex) {
-        // Clear previous lines
-        map.getOverlays().removeIf(overlay -> overlay instanceof Polyline);
-        
+    private void drawStepRoad(int startIdx, int endIdx) {
+        // Highlight current chặng in Blue
         new Thread(() -> {
             try {
-                RoadManager roadManager = new OSRMRoadManager(this, getPackageName());
-                ArrayList<GeoPoint> stepPoints = new ArrayList<>();
-                stepPoints.add(routePoints.get(startIndex));
-                stepPoints.add(routePoints.get(endIndex));
+                RoadManager roadManager = new OSRMRoadManager(getApplicationContext(), getPackageName());
+                ArrayList<GeoPoint> points = new ArrayList<>();
+                points.add(routePoints.get(startIdx));
+                points.add(routePoints.get(endIdx));
 
-                Road road = roadManager.getRoad(stepPoints);
+                Road road = roadManager.getRoad(points);
                 if (road.mStatus == Road.STATUS_OK) {
                     Polyline stepOverlay = RoadManager.buildRoadOverlay(road);
-                    stepOverlay.getOutlinePaint().setColor(Color.BLUE); // Highlight current step in Blue
+                    stepOverlay.getOutlinePaint().setColor(Color.BLUE);
                     stepOverlay.getOutlinePaint().setStrokeWidth(14f);
 
                     runOnUiThread(() -> {
-                        map.getOverlays().add(stepOverlay);
-                        map.invalidate();
+                        if (map != null) {
+                            // Remove previous blue lines if any
+                            map.getOverlays().removeIf(o -> o instanceof Polyline && ((Polyline) o).getOutlinePaint().getColor() == Color.BLUE);
+                            map.getOverlays().add(stepOverlay);
+                            map.invalidate();
+                        }
                     });
                 }
             } catch (Exception e) {
@@ -183,14 +183,7 @@ public class OngoingMapActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        map.onResume();
-    }
-
+    protected void onResume() { super.onResume(); if (map != null) map.onResume(); }
     @Override
-    protected void onPause() {
-        super.onPause();
-        map.onPause();
-    }
+    protected void onPause() { super.onPause(); if (map != null) map.onPause(); }
 }

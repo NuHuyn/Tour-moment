@@ -20,46 +20,14 @@ public class Tour implements Serializable {
     @SerializedName("isShared")
     private boolean isShared;
 
-    /**
-     * SỬA LỖI TẠI ĐÂY:
-     * Chỉ dùng 1 biến duy nhất mapping với "authorId".
-     * Kiểu Object giúp nhận được cả chuỗi ID hoặc Object chi tiết từ Server.
-     */
     @SerializedName("authorId")
-    private Object authorData;
+    private String authorId;
 
-    private List<Waypoint> waypoints;
-    private List<String> photos;
+    @SerializedName("author")
+    private UserDetails author;
 
-    // --- XỬ LÝ AUTHOR ---
-    public String getAuthorIdString() {    if (authorData == null) return "";
-        if (authorData instanceof String) return (String) authorData;
+    private List<Waypoint> waypoints = new ArrayList<>();
 
-        // Trường hợp là Map (GSON mặc định)
-        if (authorData instanceof java.util.Map) {
-            Object id = ((java.util.Map<?, ?>) authorData).get("_id");
-            return id != null ? id.toString() : "";
-        }
-
-        // Trường hợp là Object UserDetails
-        if (authorData instanceof UserDetails) {
-            return ((UserDetails) authorData).getId();
-        }
-        return "";
-    }
-
-    public void setAuthorIdString(String userId) {
-        this.authorData = userId;
-    }
-
-    public UserDetails getAuthorDetails() {
-        if (authorData instanceof UserDetails) {
-            return (UserDetails) authorData;
-        }
-        return null;
-    }
-
-    // --- HÀM TIỆN ÍCH ---
     public int getTotalPrice() {
         int total = 0;
         if (waypoints != null) {
@@ -70,38 +38,34 @@ public class Tour implements Serializable {
         return total;
     }
 
-    // --- INNER CLASSES ---
     public static class UserDetails implements Serializable {
-        @SerializedName("_id")
-        private String id;
         private String displayName;
         private String photoUrl;
 
-        public String getId() { return id; }
         public String getDisplayName() { return displayName; }
+        public void setDisplayName(String displayName) { this.displayName = displayName; }
         public String getPhotoUrl() { return photoUrl; }
+        public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
     }
 
     public static class Waypoint implements Serializable {
-        private String note;
         private String locationName;
+        private String note;
         private int price;
+        private List<String> photos = new ArrayList<>();
         private Coordinate coordinate;
-        private List<String> photos;
         private transient boolean isExpanded = false;
 
         public boolean isExpanded() { return isExpanded; }
         public void setExpanded(boolean expanded) { this.isExpanded = expanded; }
-        public List<String> getPhotos() {
-            return (photos == null) ? new ArrayList<>() : photos;
-        }
-        public void setPhotos(List<String> photos) { this.photos = photos; }
-        public String getNote() { return note; }
-        public void setNote(String note) { this.note = note; }
         public String getLocationName() { return locationName; }
         public void setLocationName(String locationName) { this.locationName = locationName; }
+        public String getNote() { return note; }
+        public void setNote(String note) { this.note = note; }
         public int getPrice() { return price; }
         public void setPrice(int price) { this.price = price; }
+        public List<String> getPhotos() { return photos; }
+        public void setPhotos(List<String> photos) { this.photos = photos; }
         public Coordinate getCoordinate() { return coordinate; }
         public void setCoordinate(Coordinate coordinate) { this.coordinate = coordinate; }
     }
@@ -115,7 +79,7 @@ public class Tour implements Serializable {
         public void setCoordinates(List<Double> coordinates) { this.coordinates = coordinates; }
     }
 
-    // --- GETTERS & SETTERS ---
+    // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getTitle() { return title; }
@@ -124,6 +88,8 @@ public class Tour implements Serializable {
     public void setDescription(String description) { this.description = description; }
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public String getVideoUrl() { return videoUrl; }
+    public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public String getStartDate() { return startDate; }
@@ -132,10 +98,10 @@ public class Tour implements Serializable {
     public void setEndDate(String endDate) { this.endDate = endDate; }
     public boolean isShared() { return isShared; }
     public void setShared(boolean shared) { isShared = shared; }
+    public String getAuthorId() { return authorId; }
+    public void setAuthorId(String authorId) { this.authorId = authorId; }
+    public UserDetails getAuthor() { return author; }
+    public void setAuthor(UserDetails author) { this.author = author; }
     public List<Waypoint> getWaypoints() { return waypoints; }
     public void setWaypoints(List<Waypoint> waypoints) { this.waypoints = waypoints; }
-    public List<String> getPhotos() { return photos; }
-    public void setPhotos(List<String> photos) { this.photos = photos; }
-    public String getVideoUrl() { return videoUrl; }
-    public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
 }

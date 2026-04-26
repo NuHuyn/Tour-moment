@@ -4,9 +4,11 @@
 
     <!-- INTERNET -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
-    <!-- LOCATION (bắt buộc để lấy vị trí) -->
+    <!-- LOCATION -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -38,6 +40,7 @@
         <activity android:name=".TourDetailActivity"/>
         <activity android:name=".MyTourActivity"/>
         <activity android:name=".ReelsActivity"/>
+        <activity android:name=".OngoingMapActivity"/>
 
         <activity android:name=".LoginActivity" />
 

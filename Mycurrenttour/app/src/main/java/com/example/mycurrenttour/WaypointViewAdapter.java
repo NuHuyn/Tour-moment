@@ -16,13 +16,15 @@ public class WaypointViewAdapter extends RecyclerView.Adapter<WaypointViewAdapte
 
     private List<Tour.Waypoint> waypointList;
     private OnWaypointClickListener listener;
+    private boolean isOngoing;
 
     public interface OnWaypointClickListener {
         void onWaypointClick(int position);
     }
 
-    public WaypointViewAdapter(List<Tour.Waypoint> waypointList, OnWaypointClickListener listener) {
+    public WaypointViewAdapter(List<Tour.Waypoint> waypointList, boolean isOngoing, OnWaypointClickListener listener) {
         this.waypointList = waypointList;
+        this.isOngoing = isOngoing;
         this.listener = listener;
     }
 
@@ -34,13 +36,10 @@ public class WaypointViewAdapter extends RecyclerView.Adapter<WaypointViewAdapte
 
         public ViewHolder(View itemView) {
             super(itemView);
-            // Phần Header
             layoutHeader = itemView.findViewById(R.id.layoutHeader);
             txtWaypointInfo = itemView.findViewById(R.id.txtWaypointInfo);
             btnZoom = itemView.findViewById(R.id.btnZoomStep);
             imgExpandArrow = itemView.findViewById(R.id.imgExpandArrow);
-
-            // Phần Detail (vùng xổ xuống)
             layoutDetailContainer = itemView.findViewById(R.id.layoutDetailContainer);
             imgWaypointDetail = itemView.findViewById(R.id.imgWaypointDetail);
             txtWaypointCost = itemView.findViewById(R.id.txtWaypointCost);
@@ -60,41 +59,38 @@ public class WaypointViewAdapter extends RecyclerView.Adapter<WaypointViewAdapte
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Tour.Waypoint currentWp = waypointList.get(position);
 
-        // 1. Hiển thị thông tin tiêu đề chặng
-        if (position < waypointList.size() - 1) {
-            Tour.Waypoint nextWp = waypointList.get(position + 1);
-            holder.txtWaypointInfo.setText("Chặng " + (position + 1) + ": "
-                    + currentWp.getLocationName() + " ➔ " + nextWp.getLocationName());
-            holder.btnZoom.setVisibility(View.VISIBLE);
+        if (isOngoing) {
+            String startName = (position == 0) ? "My Location" : waypointList.get(position - 1).getLocationName();
+            holder.txtWaypointInfo.setText("Step " + (position + 1) + ": " + startName + " ➔ " + currentWp.getLocationName());
         } else {
-            holder.txtWaypointInfo.setText("Điểm kết thúc: " + currentWp.getLocationName());
-            holder.btnZoom.setVisibility(View.GONE);
+            if (position < waypointList.size() - 1) {
+                Tour.Waypoint nextWp = waypointList.get(position + 1);
+                holder.txtWaypointInfo.setText("Step " + (position + 1) + ": " + currentWp.getLocationName() + " ➔ " + nextWp.getLocationName());
+            } else {
+                holder.txtWaypointInfo.setText("Destination: " + currentWp.getLocationName());
+            }
         }
 
-        // 2. Xử lý trạng thái Ẩn/Hiện vùng chi tiết dựa trên biến isExpanded
         boolean expanded = currentWp.isExpanded();
         holder.layoutDetailContainer.setVisibility(expanded ? View.VISIBLE : View.GONE);
-        holder.imgExpandArrow.setRotation(expanded ? 180 : 0); // Xoay mũi tên khi mở
+        holder.imgExpandArrow.setRotation(expanded ? 180 : 0);
 
-        // 3. Đổ dữ liệu vào phần chi tiết (Ảnh, Note, Cost)
-        holder.txtWaypointCost.setText("Chi phí: $" + currentWp.getPrice());
-        holder.txtWaypointNote.setText("Ghi chú: " +
-                (currentWp.getNote() != null && !currentWp.getNote().isEmpty() ? currentWp.getNote() : "Không có ghi chú"));
+        holder.txtWaypointCost.setText("Cost: $" + currentWp.getPrice());
+        holder.txtWaypointNote.setText("Note: " +
+                (currentWp.getNote() != null && !currentWp.getNote().isEmpty() ? currentWp.getNote() : "No notes available"));
 
-        // Load ảnh đầu tiên nếu có
         if (currentWp.getPhotos() != null && !currentWp.getPhotos().isEmpty()) {
             Picasso.get().load(currentWp.getPhotos().get(0))
-                    .placeholder(R.drawable.centralvietnam) // Ảnh chờ
-                    .error(R.drawable.centralvietnam)       // Ảnh lỗi
+                    .placeholder(R.drawable.centralvietnam)
+                    .error(R.drawable.centralvietnam)
                     .into(holder.imgWaypointDetail);
         } else {
             holder.imgWaypointDetail.setImageResource(R.drawable.centralvietnam);
         }
 
-        // 4. Sự kiện click vào Header để Đóng/Mở
         holder.layoutHeader.setOnClickListener(v -> {
             currentWp.setExpanded(!currentWp.isExpanded());
-            notifyItemChanged(position); // Cập nhật lại giao diện tại vị trí này
+            notifyItemChanged(position);
         });
 
         holder.btnZoom.setOnClickListener(v -> {

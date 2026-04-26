@@ -11,14 +11,20 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-// --- 1. UPLOAD ẢNH ---
+// --- 1. UPLOAD ẢNH (Dùng trực tiếp IP Google Cloud để tránh lỗi ảnh trên điện thoại thật) ---
 router.post("/upload", upload.single('image'), (req, res) => {
     try {
-        if (!req.file) return res.status(400).json({ message: "Không có file" });
-        const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+        if (!req.file) {
+            return res.status(400).json({ message: "No file uploaded" });
+        }
+        
+        // SỬA Ở ĐÂY: Dùng trực tiếp IP Google Cloud thay vì dùng req.get('host')
+        const imageUrl = `http://10.128.0.2/uploads/${req.file.filename}`;
+        
         res.status(200).json({ imageUrl: imageUrl });
     } catch (err) {
-        res.status(500).json({ message: "Lỗi upload: " + err.message });
+        console.error("Upload Error:", err);
+        res.status(500).json({ message: "Server error during upload: " + err.message });
     }
 });
 
