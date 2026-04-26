@@ -12,11 +12,19 @@ import retrofit2.http.PUT;
 import retrofit2.http.Part;
 import retrofit2.http.Path;
 import com.google.gson.annotations.SerializedName;
+import java.util.Map;
 
 public interface ApiService {
 
+
+    // Giả sử đường dẫn API là "tours/add-to-collection/{id}"
+    @POST("tours/add-to-collection/{id}")
+    Call<Void> addTourToMyCollection(@Path("id") String tourId, @Body Map<String, String> body);
+    // Sửa dòng này
+    // Sửa lại dòng này trong ApiService.java
     @GET("api/tours/my-tours")
-    Call<List<Tour>> getMyTours();
+    Call<List<Tour>> getMyTours(@retrofit2.http.Query("userId") String userId);
+
 
     // Fetch public tour list for the Home screen
     @GET("api/tours")

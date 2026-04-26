@@ -4,137 +4,148 @@ const Tour = require("../models/Tour");
 const multer = require('multer');
 const path = require('path');
 
-// 1. Cấu hình Multer
+// --- CẤU HÌNH MULTER ---
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/'); 
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
+    destination: (req, file, cb) => { cb(null, 'uploads/'); },
+    filename: (req, file, cb) => { cb(null, Date.now() + path.extname(file.originalname)); }
 });
+const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-const upload = multer({ storage: storage });
-
-// 2. API Upload ảnh
-router.post('/upload', upload.single('image'), (req, res) => {
+// --- 1. UPLOAD ẢNH ---
+router.post("/upload", upload.single('image'), (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ message: "Vui lòng chọn một file ảnh" });
-        }
-        const fullUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-        res.status(200).json({ 
-            message: "Tải lên thành công",
-            imageUrl: fullUrl 
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Cập nhật thông tin Tour (Dùng cho updateTour trong Android)
-router.put("/:id", async (req, res) => {
-    try {
-        const updatedTour = await Tour.findByIdAndUpdate(
-            req.params.id,
-            req.body, // Nhận toàn bộ body bao gồm videoUrl nếu có
-            { new: true }
-        );
-        res.status(200).json(updatedTour);
+        if (!req.file) return res.status(400).json({ message: "Không có file" });
+        const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+        res.status(200).json({ imageUrl: imageUrl });
     } catch (err) {
-        res.status(500).json({ message: "Lỗi cập nhật tour: " + err.message });
+        res.status(500).json({ message: "Lỗi upload: " + err.message });
     }
 });
 
-// 3. LẤY TOUR CÁ NHÂN (Cho màn hình My Travel)
-router.get("/my-tours", async (req, res) => {
-    try {
-        const myTours = await Tour.find().sort({ createdAt: -1 }); // Sắp xếp theo tour mới tạo nhất
-        res.json(myTours);
-    } catch (err) {
-        res.status(500).json({ message: "Lỗi lấy tour cá nhân: " + err.message });
-    }
-});
-
-// 4. TẠO TOUR MỚI
+// --- 2. TẠO TOUR MỚI ---
 router.post("/", async (req, res) => {
     try {
-        // --- BỔ SUNG videoUrl vào đây ---
-        const { authorId, title, description, startDate, endDate, imageUrl, videoUrl, status, waypoints } = req.body;
-        
-        const newTour = new Tour({
-            authorId,
-            title,
-            description,
-            startDate,
-            endDate,
-            imageUrl,
-            videoUrl, // Lưu link video MP4 từ slide ảnh
-            status: status || "Upcoming",
-            isShared: false,
-            waypoints: waypoints || []
-        });
-
+        const newTour = new Tour({ ...req.body, isShared: false });
         const savedTour = await newTour.save();
-        res.status(201).json(savedTour);
+        res.status(201).json(savedTour); // Bỏ populate
     } catch (err) {
         res.status(500).json({ message: "Lỗi tạo tour: " + err.message });
     }
 });
 
-// 5. THÊM ĐỊA ĐIỂM (WAYPOINT)
-router.patch("/:tourId/waypoint", async (req, res) => {
+// --- 3. LẤY TOUR CÁ NHÂN (HÀM QUAN TRỌNG NHẤT) ---
+router.get("/my-tours/:userId", async (req, res) => {
     try {
-        const { locationName, longitude, latitude, note, arrivalDate, price, photos } = req.body;
-        
-        const updatedTour = await Tour.findByIdAndUpdate(
-            req.params.tourId,
-            {
-                $push: {
-                    waypoints: {
-                        locationName,
-                        price,
-                        coordinate: {
-                            type: "Point",
-                            coordinates: [parseFloat(longitude || 0), parseFloat(latitude || 0)] 
-                        },
-                        arrivalDate,
-                        note,
-                        photos: photos || [] 
-                    }
-                }
-            },
-            { new: true }
-        );
-        res.json(updatedTour);
+        const userId = req.params.userId;
+        const statusFilter = req.query.status; 
+        const now = new Date();
+
+        // Tìm tour của User (Bỏ populate để tránh crash ID)
+        let tours = await Tour.find({ authorId: userId }).sort({ createdAt: -1 });
+
+        // Tự động cập nhật status theo ngày
+        const updatedTours = tours.map(tour => {
+            const tourObj = tour.toObject();
+            if (tourObj.endDate && new Date(tourObj.endDate) <= now) {
+                tourObj.status = "Completed";
+            } else if (new Date(tourObj.startDate) <= now && (!tourObj.endDate || new Date(tourObj.endDate) > now)) {
+                tourObj.status = "Ongoing";
+            } else {
+                tourObj.status = "Upcoming";
+            }
+            return tourObj;
+        });
+
+        // Lọc theo nút bấm trên App
+        const filteredTours = updatedTours.filter(t => t.status === statusFilter);
+        res.json(filteredTours);
     } catch (err) {
-        res.status(500).json({ message: "Lỗi thêm địa điểm: " + err.message });
+        res.status(500).json({ message: "Lỗi lấy danh sách tour: " + err.message });
     }
 });
 
-// 6. LẤY DANH SÁCH TOUR CÔNG KHAI (Màn hình Home)
-router.get("/", async (req, res) => {
+// --- 4. CẬP NHẬT TOUR ---
+router.put("/:id", async (req, res) => {
     try {
-        const sharedTours = await Tour.find({ isShared: true })
-            .populate("authorId", "displayName photoUrl")
-            .sort({ startDate: -1 });
-        res.json(sharedTours);
-    } catch (err) {
-        res.status(500).json({ message: "Lỗi lấy dữ liệu: " + err.message });
-    }
-});
-
-// Cập nhật trạng thái isShared của tour
-router.patch("/:id/share", async (req, res) => {
-    try {
-        const updatedTour = await Tour.findByIdAndUpdate(
-            req.params.id,
-            { isShared: true }, 
-            { new: true }
-        );
+        const updatedTour = await Tour.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.status(200).json(updatedTour);
     } catch (err) {
-        res.status(500).json({ message: "Lỗi update: " + err.message });
+        res.status(500).json({ message: "Lỗi cập nhật: " + err.message });
+    }
+});
+
+
+// --- 6. CHIA SẺ TOUR ---
+router.patch("/:id/share", async (req, res) => {
+    try {
+        const updatedTour = await Tour.findByIdAndUpdate(req.params.id, { isShared: true }, { new: true });
+        res.status(200).json(updatedTour);
+    } catch (err) {
+        res.status(500).json({ message: "Lỗi share: " + err.message });
+    }
+});
+
+// --- 7. COPY TOUR ---a
+router.post("/copy/:tourId", async (req, res) => {
+    try {
+        const { userId } = req.body; // ID của nick thứ 2
+        const originalTour = await Tour.findById(req.params.tourId);
+        
+        if (!originalTour) {
+            return res.status(404).json({ message: "Không tìm thấy tour gốc" });
+        }
+
+        // Nhân bản dữ liệu tour
+        const tourData = originalTour.toObject();
+        delete tourData._id;        // Xóa ID cũ
+        delete tourData.createdAt;  // Xóa ngày tạo cũ
+        delete tourData.updatedAt;  // Xóa ngày cập nhật cũ
+
+        const clonedTour = new Tour({
+            ...tourData,
+            authorId: userId,          
+            isShared: false,           
+            status: "Upcoming", 
+            
+            // QUAN TRỌNG: Đặt lại ngày đi/về vào tương lai để nó hiện ở tab Upcoming
+            // Ngày đi: Ngày mai (Date.now + 1 ngày)
+            startDate: new Date(Date.now() + 24 * 60 * 60 * 1000), 
+            // Ngày về: 4 ngày sau
+            endDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000)
+        });
+
+        const savedTour = await clonedTour.save();
+        res.status(201).json(savedTour);
+    } catch (err) {
+        console.error("LỖI COPY:", err);
+        res.status(500).json({ message: "Lỗi khi copy tour: " + err.message });
+    }
+});
+
+
+// LẤY DANH SÁCH TOUR CÔNG KHAI (HomeActivity gọi)
+router.get("/", async (req, res) => {
+    try {
+        const User = require("../models/User");
+
+        // 1. Lấy tour đã chia sẻ
+        let sharedTours = await Tour.find({ isShared: true }).lean().sort({ createdAt: -1 });
+
+        // 2. Gán thông tin Author bằng cách tìm theo googleId
+        const finalTours = await Promise.all(sharedTours.map(async (tour) => {
+            // SỬA Ở ĐÂY: Tìm theo googleId thay vì findById
+            const authorData = await User.findOne({ googleId: tour.authorId }).select("displayName photoUrl");
+            
+            return { 
+                ...tour, 
+                author: authorData || { displayName: "Traveler", photoUrl: "" } 
+            };
+        }));
+
+        res.json(finalTours);
+    } catch (err) {
+        console.error("LỖI HOME:", err);
+        res.status(500).json({ message: "Lỗi lấy dữ liệu Home: " + err.message });
     }
 });
 

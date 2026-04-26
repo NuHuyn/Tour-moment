@@ -27,16 +27,14 @@ public class ViewVideoActivity extends AppCompatActivity {
 
         imgSlideShow = findViewById(R.id.imgSlideShow);
 
-        // Nhận danh sách ảnh từ Intent
         photoList = getIntent().getStringArrayListExtra("PHOTO_LIST");
 
         if (photoList == null || photoList.isEmpty()) {
-            Toast.makeText(this, "Không có dữ liệu ảnh để hiển thị!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "No image data to display.", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
-        // Thêm nút đóng hoặc xử lý Back nếu cần
         startSlideShow();
     }
 
@@ -48,17 +46,14 @@ public class ViewVideoActivity extends AppCompatActivity {
 
                 String currentPhotoUrl = photoList.get(currentIndex);
 
-                // Đồng bộ Placeholder với các màn hình khác (R.drawable.centralvietnam)
                 Picasso.get()
-                        .load(currentPhotoUrl) // Picasso có thể nhận String trực tiếp, không cần parse Uri thủ công
+                        .load(currentPhotoUrl)
                         .placeholder(R.drawable.centralvietnam)
                         .error(R.drawable.centralvietnam)
                         .into(imgSlideShow);
 
-                // Loop danh sách
                 currentIndex = (currentIndex + 1) % photoList.size();
 
-                // 3 giây chuyển 1 lần
                 handler.postDelayed(this, 3000);
             }
         };
@@ -68,7 +63,6 @@ public class ViewVideoActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        // Tạm dừng slide khi người dùng thoát ra ngoài (nhận cuộc gọi, v.v.)
         if (handler != null && slideRunnable != null) {
             handler.removeCallbacks(slideRunnable);
         }
@@ -77,7 +71,6 @@ public class ViewVideoActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Tiếp tục chạy slide khi quay lại
         if (photoList != null && !photoList.isEmpty()) {
             handler.post(slideRunnable);
         }
@@ -86,7 +79,6 @@ public class ViewVideoActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // Dừng triệt để để tránh Memory Leak
         if (handler != null && slideRunnable != null) {
             handler.removeCallbacks(slideRunnable);
         }

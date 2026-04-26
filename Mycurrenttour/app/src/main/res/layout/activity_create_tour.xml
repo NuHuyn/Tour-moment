@@ -25,12 +25,14 @@
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Trip name">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edtTourTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-        </com.google.android.material.textfield.TextInputLayout>
+            android:hint="Trip name"
+            android:focusable="true"
+            android:focusableInTouchMode="true"> <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/edtTourTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textPersonName"
+            android:importantForAutofill="no" /> </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"

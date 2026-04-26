@@ -114,41 +114,51 @@ public class TourDetailActivity extends AppCompatActivity {
             return;
         }
 
-        // KHÔNG dùng imgTour.setVisibility(View.GONE) nữa để ảnh bìa luôn hiển thị ở dưới
-        // Bạn có thể giảm độ mờ (alpha) của ảnh bìa một chút để slideshow nổi bật hơn (tùy chọn)
-        imgTour.setAlpha(0.6f);
+        // Làm mờ nhẹ ảnh bìa ở dưới để tạo chiều sâu
+        imgTour.setAlpha(0.4f);
 
-        // Chỉ ẩn nút Play và hiện ViewPager2 lên trên
         btnPlaySlideshow.setVisibility(View.GONE);
         viewPagerSlideshow.setVisibility(View.VISIBLE);
 
         SlideshowAdapter adapter = new SlideshowAdapter(photos);
         viewPagerSlideshow.setAdapter(adapter);
 
-        // HIỆU ỨNG CHUYỂN MƯỢT KHÔNG KHOẢNG CÁCH (Cross-fade)
+        // Tối ưu bộ nhớ: Load trước các slide để không bị khựng
+        viewPagerSlideshow.setOffscreenPageLimit(1);
+
+        // HIỆU ỨNG CINEMATIC (KEN BURNS + CROSS-FADE)
         viewPagerSlideshow.setPageTransformer((page, position) -> {
-            page.setTranslationX(-position * page.getWidth()); // Giữ các ảnh đè lên nhau tại một vị trí
+            page.setTranslationX(-position * page.getWidth());
 
             if (position < -1 || position > 1) {
                 page.setAlpha(0f);
             } else {
-                // Khi chuyển, ảnh cũ mờ dần (alpha giảm) và ảnh mới hiện lên (alpha tăng)
-                page.setAlpha(1 - Math.abs(position));
+                // Duy trì Alpha tối thiểu 0.01 thay vì 0 để tránh hiện tượng màn hình đen/trắng khi chuyển
+                float alpha = Math.max(0.01f, 1 - Math.abs(position));
+                page.setAlpha(alpha);
+
+                float scale = 1.0f + (alpha * 0.05f);
+                page.setScaleX(scale);
+                page.setScaleY(scale);
             }
         });
 
-        // Rút ngắn thời gian chuyển để tạo cảm giác liên tục
         initMusic();
-        sliderHandler.postDelayed(sliderRunnable, 2500);
+
+        // Xóa các callback cũ nếu có để tránh chạy chồng chéo
+        sliderHandler.removeCallbacks(sliderRunnable);
+        // Bắt đầu chạy sau 4 giây để ảnh đầu tiên kịp hiển thị mượt mà
+        sliderHandler.postDelayed(sliderRunnable, 4000);
     }
 
     private Runnable sliderRunnable = new Runnable() {
         @Override
         public void run() {
-            if (viewPagerSlideshow.getAdapter() != null) {
+            if (viewPagerSlideshow.getAdapter() != null && photos.size() > 1) {
                 int nextItem = (viewPagerSlideshow.getCurrentItem() + 1) % photos.size();
+                // true: sử dụng hiệu ứng trượt của ViewPager2 kết hợp với Transformer chúng ta đã viết
                 viewPagerSlideshow.setCurrentItem(nextItem, true);
-                sliderHandler.postDelayed(this, 3000);
+                sliderHandler.postDelayed(this, 4000);
             }
         }
     };
@@ -173,8 +183,8 @@ public class TourDetailActivity extends AppCompatActivity {
                 .error(R.drawable.centralvietnam)
                 .into(imgTour);
 
-        txtStartDetail.setText(formatDate(tour.getStartDateString()));
-        txtEndDetail.setText(formatDate(tour.getEndDateString()));
+        txtStartDetail.setText(formatDate(tour.getStartDate()));
+        txtEndDetail.setText(formatDate(tour.getEndDate()));
 
         if (tourWaypoints != null && !tourWaypoints.isEmpty()) {
             txtLocationDetail.setText(tourWaypoints.get(0).getLocationName());

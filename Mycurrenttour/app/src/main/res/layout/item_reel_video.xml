@@ -1,11 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#000000"> <androidx.viewpager2.widget.ViewPager2
+    android:id="@+id/viewPagerReel"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" />
 
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/viewPagerReel"
+    <View
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="250dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/gradient_shadow" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,27 +19,45 @@
         android:layout_gravity="bottom"
         android:orientation="vertical"
         android:padding="20dp"
-        android:background="@drawable/gradient_shadow"> <TextView
+        android:layout_marginBottom="20dp"> <TextView
         android:id="@+id/txtTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="Tour Title"
+        android:shadowColor="#000000"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="2"
         android:textColor="#FFFFFF"
-        android:textSize="20sp"
+        android:textSize="22sp"
         android:textStyle="bold" />
 
         <LinearLayout
             android:id="@+id/layoutTourLink"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="12dp"
             android:background="@drawable/bg_white_rounded"
-            android:padding="8dp">
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="8dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@android:drawable/ic_menu_directions"
+                android:layout_gravity="center"
+                android:layout_marginEnd="6dp" />
+
             <TextView
                 android:id="@+id/txtTourNameLink"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="View Detail"
                 android:textColor="#000000"
-                android:textSize="14sp" />
+                android:textSize="14sp"
+                android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

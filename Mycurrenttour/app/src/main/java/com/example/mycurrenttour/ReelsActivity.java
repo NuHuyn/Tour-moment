@@ -11,6 +11,7 @@ import java.util.List;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+import android.view.View;
 
 public class ReelsActivity extends AppCompatActivity {
 
@@ -23,19 +24,21 @@ public class ReelsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_reels);
 
-
         recyclerReels = findViewById(R.id.recyclerFavorite);
-
-
         recyclerReels.setLayoutManager(new LinearLayoutManager(this));
 
+        // --- THÊM CÁC DÒNG NÀY ĐỂ MƯỢT HƠN ---
+        recyclerReels.setHasFixedSize(true);
+        recyclerReels.setItemViewCacheSize(10); // Giữ lại 10 item trong bộ nhớ đệm
+        recyclerReels.setDrawingCacheEnabled(true);
+        recyclerReels.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
+        // -------------------------------------
 
         PagerSnapHelper snapHelper = new PagerSnapHelper();
         snapHelper.attachToRecyclerView(recyclerReels);
 
         loadReelsData();
     }
-
     private void loadReelsData() {
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
 

@@ -1,12 +1,12 @@
-package com.example.mycurrenttour;
-
-import android.app.Activity;
+package com.example.mycurrenttour;import android.app.Activity;
 import android.app.DatePickerDialog;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -23,6 +23,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -49,8 +51,6 @@ public class CreateTourActivity extends AppCompatActivity {
     private LinearLayout waypointContainer;
     private ExtendedFloatingActionButton btnAddWaypoint;
     private View layoutPlaceholder;
-
-    // --- BỔ SUNG CHECKBOX VIDEO ---
     private CheckBox cbCreateVideo;
 
     private Date startDate = new Date();
@@ -62,6 +62,7 @@ public class CreateTourActivity extends AppCompatActivity {
     private ApiService apiService;
     private SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault());
     private SimpleDateFormat displayFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+    private ProgressDialog loadingDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,13 +70,14 @@ public class CreateTourActivity extends AppCompatActivity {
         setContentView(R.layout.activity_create_tour);
 
         apiService = ApiClient.getClient().create(ApiService.class);
+        loadingDialog = new ProgressDialog(this);
+        loadingDialog.setCancelable(false);
 
         initViews();
         setupStatusSpinner();
 
         btnPickStartDate.setOnClickListener(v -> showDatePicker(true));
         btnPickEndDate.setOnClickListener(v -> showDatePicker(false));
-
         btnUploadCover.setOnClickListener(v -> {
             isSelectingCover = true;
             openGallery();
@@ -99,19 +101,28 @@ public class CreateTourActivity extends AppCompatActivity {
         waypointContainer = findViewById(R.id.waypointContainer);
         btnAddWaypoint = findViewById(R.id.btnAddWaypoint);
         layoutPlaceholder = findViewById(R.id.layoutPlaceholder);
-
-        // Khởi tạo CheckBox
         cbCreateVideo = findViewById(R.id.cbCreateVideo);
 
         btnPickStartDate.setText(displayFormat.format(startDate));
         btnPickEndDate.setText(displayFormat.format(endDate));
+        edtTitle.requestFocus();
     }
 
     private void setupStatusSpinner() {
         String[] opts = {"Upcoming", "Ongoing", "Completed"};
         ArrayAdapter<String> ad = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, opts);
         ad.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        if (spnStatus != null) spnStatus.setAdapter(ad);
+        if (spnStatus != null) {
+            spnStatus.setAdapter(ad);
+            spnStatus.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    btnSaveAndStart.setText(opts[position].equalsIgnoreCase("Completed") ? "SAVE THE MEMORY" : "START THE JOURNEY");
+                }
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {}
+            });
+        }
     }
 
     private void startSavingProcess() {
@@ -122,8 +133,6 @@ public class CreateTourActivity extends AppCompatActivity {
         }
 
         btnSaveAndStart.setEnabled(false);
-        btnSaveAndStart.setText("Creating memory...");
-
         if (pendingCoverUri != null) {
             uploadCoverThenSave(title);
         } else {
@@ -132,125 +141,170 @@ public class CreateTourActivity extends AppCompatActivity {
     }
 
     private void uploadCoverThenSave(String title) {
-        File file = FileUtils.getFile(this, pendingCoverUri);
-        if (file == null) { resetSaveButton(); return; }
+        loadingDialog.setMessage("Compressing and uploading cover image...");
+        loadingDialog.show();
 
-        RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
-        MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
-
-        apiService.uploadImage(body).enqueue(new Callback<ApiService.UploadResponse>() {
-            @Override
-            public void onResponse(Call<ApiService.UploadResponse> call, Response<ApiService.UploadResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    saveFullTour(title, response.body().getImageUrl());
-                } else {
-                    Toast.makeText(CreateTourActivity.this, "Lỗi upload ảnh bìa", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            File file = FileUtils.getFile(this, pendingCoverUri);
+            runOnUiThread(() -> {
+                if (file == null) {
+                    loadingDialog.dismiss();
                     resetSaveButton();
+                    return;
                 }
-            }
-            @Override
-            public void onFailure(Call<ApiService.UploadResponse> call, Throwable t) { resetSaveButton(); }
-        });
+
+                RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
+                MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
+
+                apiService.uploadImage(body).enqueue(new Callback<ApiService.UploadResponse>() {
+                    @Override
+                    public void onResponse(Call<ApiService.UploadResponse> call, Response<ApiService.UploadResponse> response) {
+                        loadingDialog.dismiss();
+                        if (response.isSuccessful() && response.body() != null) {
+                            saveFullTour(title, response.body().getImageUrl());
+                        } else {
+                            Toast.makeText(CreateTourActivity.this, "Cover upload failed", Toast.LENGTH_SHORT).show();
+                            resetSaveButton();
+                        }
+                    }
+                    @Override
+                    public void onFailure(Call<ApiService.UploadResponse> call, Throwable t) {
+                        loadingDialog.dismiss();
+                        resetSaveButton();
+                    }
+                });
+            });
+        }).start();
     }
 
     private void saveFullTour(String title, String coverUrl) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            Toast.makeText(this, "User not logged in!", Toast.LENGTH_SHORT).show();
+            resetSaveButton();
+            return;
+        }
+
+        loadingDialog.setMessage("Saving tour...");
+        loadingDialog.show();
+
         Tour tour = new Tour();
         tour.setTitle(title);
-        tour.setDescription(edtTourDesc.getText().toString());
+        tour.setDescription(edtTourDesc.getText().toString().trim());
         tour.setImageUrl(coverUrl);
+        tour.setAuthorIdString(user.getUid());
+        tour.setStatus(spnStatus.getSelectedItem().toString());
         tour.setStartDate(isoFormat.format(startDate));
         tour.setEndDate(isoFormat.format(endDate));
-        tour.setStatus(spnStatus.getSelectedItem().toString());
 
-        // Danh sách ảnh để tạo video
-        ArrayList<String> videoPhotos = new ArrayList<>();
+        List<Tour.Waypoint> waypoints = new ArrayList<>();
+        List<String> videoPhotos = new ArrayList<>();
         if (!coverUrl.isEmpty()) videoPhotos.add(coverUrl);
 
-        List<Tour.Waypoint> waypointList = new ArrayList<>();
         for (int i = 0; i < waypointContainer.getChildCount(); i++) {
-            View v = waypointContainer.getChildAt(i);
-
-            TextInputEditText edtWpName = v.findViewById(R.id.edtWpLocationName);
-            TextInputEditText edtWpPrice = v.findViewById(R.id.edtWpPrice);
-            TextInputEditText edtWpNote = v.findViewById(R.id.edtWpNote);
-            TextInputEditText edtLat = v.findViewById(R.id.edtWpLat);
-            TextInputEditText edtLng = v.findViewById(R.id.edtWpLng);
-            ImageView imgWp = v.findViewById(R.id.imgWpPreview);
-
-            Tour.Waypoint wp = new Tour.Waypoint();
-            wp.setLocationName(edtWpName.getText().toString().trim());
-            wp.setNote(edtWpNote.getText().toString().trim());
-
-            String pStr = edtWpPrice.getText().toString().trim();
-            wp.setPrice(pStr.isEmpty() ? 0 : Integer.parseInt(pStr));
-
-            if (imgWp.getTag() != null) {
-                String wpUrl = (String) imgWp.getTag();
-                wp.setPhotos(Arrays.asList(wpUrl));
-                // Thêm vào danh sách tạo video
-                videoPhotos.add(wpUrl);
-            }
-
-            try {
-                double lat = Double.parseDouble(edtLat.getText().toString());
-                double lng = Double.parseDouble(edtLng.getText().toString());
-                Tour.Coordinate coord = new Tour.Coordinate();
-                coord.setType("Point");
-                coord.setCoordinates(Arrays.asList(lng, lat));
-                wp.setCoordinate(coord);
-            } catch (Exception e) { Log.e("CreateTour", "Coordinate error"); }
-
-            waypointList.add(wp);
+            waypoints.add(parseWaypoint(waypointContainer.getChildAt(i), videoPhotos));
         }
-        tour.setWaypoints(waypointList);
+        tour.setWaypoints(waypoints);
 
-        // --- XỬ LÝ VIDEO ---
         if (cbCreateVideo.isChecked() && !videoPhotos.isEmpty()) {
-            // Giả lập link video bằng ảnh đầu tiên hoặc một logic tạo từ server
-            // Trong thực tế, server sẽ nhận mảng videoPhotos để ghép thành MP4
-            tour.setVideoUrl(videoPhotos.get(0));
-            Log.d("CreateTour", "Video will be created with " + videoPhotos.size() + " photos");
+            tour.setVideoUrl(videoPhotos.get(0)); // Placeholder logic for video
         }
 
         apiService.createTour(tour).enqueue(new Callback<Tour>() {
             @Override
             public void onResponse(Call<Tour> call, Response<Tour> response) {
+                loadingDialog.dismiss();
                 if (response.isSuccessful()) {
-                    Toast.makeText(CreateTourActivity.this, "Tạo Tour thành công!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(CreateTourActivity.this, "Tour Saved Successfully!", Toast.LENGTH_SHORT).show();
                     finish();
-                } else { resetSaveButton(); }
-            }
-            @Override
-            public void onFailure(Call<Tour> call, Throwable t) { resetSaveButton(); }
-        });
-    }
-
-    private void uploadWaypointImage(Uri uri, ImageView targetImageView) {
-        File file = FileUtils.getFile(this, uri);
-        if (file == null) return;
-
-        RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
-        MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
-
-        apiService.uploadImage(body).enqueue(new Callback<ApiService.UploadResponse>() {
-            @Override
-            public void onResponse(Call<ApiService.UploadResponse> call, Response<ApiService.UploadResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    targetImageView.setTag(response.body().getImageUrl());
-                    Toast.makeText(CreateTourActivity.this, "Đã tải ảnh chặng dừng", Toast.LENGTH_SHORT).show();
+                } else {
+                    Log.e("SAVE_ERROR", "Error Code: " + response.code());
+                    Toast.makeText(CreateTourActivity.this, "Server Error: " + response.code(), Toast.LENGTH_LONG).show();
+                    resetSaveButton();
                 }
             }
             @Override
-            public void onFailure(Call<ApiService.UploadResponse> call, Throwable t) {}
+            public void onFailure(Call<Tour> call, Throwable t) {
+                loadingDialog.dismiss();
+                Log.e("SAVE_ERROR", t.getMessage());
+                Toast.makeText(CreateTourActivity.this, "Network error", Toast.LENGTH_SHORT).show();
+                resetSaveButton();
+            }
         });
+    }
+
+    private Tour.Waypoint parseWaypoint(View v, List<String> videoPhotos) {
+        TextInputEditText edtWpName = v.findViewById(R.id.edtWpLocationName);
+        TextInputEditText edtWpPrice = v.findViewById(R.id.edtWpPrice);
+        TextInputEditText edtWpNote = v.findViewById(R.id.edtWpNote);
+        TextInputEditText edtLat = v.findViewById(R.id.edtWpLat);
+        TextInputEditText edtLng = v.findViewById(R.id.edtWpLng);
+        ImageView imgWp = v.findViewById(R.id.imgWpPreview);
+
+        Tour.Waypoint wp = new Tour.Waypoint();
+        wp.setLocationName(edtWpName.getText().toString().trim());
+        wp.setNote(edtWpNote.getText().toString().trim());
+        String pStr = edtWpPrice.getText().toString().trim();
+        wp.setPrice(pStr.isEmpty() ? 0 : Integer.parseInt(pStr));
+
+        if (imgWp.getTag() != null) {
+            String wpUrl = (String) imgWp.getTag();
+            wp.setPhotos(Arrays.asList(wpUrl));
+            videoPhotos.add(wpUrl);
+        }
+
+        try {
+            double lat = Double.parseDouble(edtLat.getText().toString());
+            double lng = Double.parseDouble(edtLng.getText().toString());
+            Tour.Coordinate coord = new Tour.Coordinate();
+            coord.setType("Point");
+            coord.setCoordinates(Arrays.asList(lng, lat));
+            wp.setCoordinate(coord);
+        } catch (Exception e) {}
+        return wp;
+    }
+
+    private void uploadWaypointImage(Uri uri, ImageView targetImageView) {
+        loadingDialog.setMessage("Uploading waypoint image...");
+        loadingDialog.show();
+
+        new Thread(() -> {
+            File file = FileUtils.getFile(this, uri);
+            runOnUiThread(() -> {
+                if (file == null) {
+                    loadingDialog.dismiss();
+                    return;
+                }
+
+                RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
+                MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
+
+                apiService.uploadImage(body).enqueue(new Callback<ApiService.UploadResponse>() {
+                    @Override
+                    public void onResponse(Call<ApiService.UploadResponse> call, Response<ApiService.UploadResponse> response) {
+                        loadingDialog.dismiss();
+                        if (response.isSuccessful() && response.body() != null) {
+                            targetImageView.setTag(response.body().getImageUrl());
+                            Toast.makeText(CreateTourActivity.this, "Image uploaded!", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(CreateTourActivity.this, "Upload failed: " + response.code(), Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                    @Override
+                    public void onFailure(Call<ApiService.UploadResponse> call, Throwable t) {
+                        loadingDialog.dismiss();
+                        Log.e("UPLOAD_WP_ERROR", t.getMessage());
+                    }
+                });
+            });
+        }).start();
     }
 
     private void addWaypointField() {
         View v = getLayoutInflater().inflate(R.layout.item_waypoint, null);
         ImageView imgWpPreview = v.findViewById(R.id.imgWpPreview);
         Button btnSelectImg = v.findViewById(R.id.btnSelectImg);
-
-        ((TextView)v.findViewById(R.id.txtWpTitle)).setText("Waypoint " + (waypointContainer.getChildCount() + 1));
+        ((TextView)v.findViewById(R.id.txtWpTitle)).setText("Stop " + (waypointContainer.getChildCount() + 1));
 
         btnSelectImg.setOnClickListener(view -> {
             isSelectingCover = false;
@@ -281,9 +335,6 @@ public class CreateTourActivity extends AppCompatActivity {
                     } else if (currentWpImageView != null) {
                         currentWpImageView.setVisibility(View.VISIBLE);
                         currentWpImageView.setImageURI(uri);
-                        View parent = (View) currentWpImageView.getParent();
-                        View placeholder = parent.findViewById(R.id.wpPlaceholder);
-                        if (placeholder != null) placeholder.setVisibility(View.GONE);
                         uploadWaypointImage(uri, currentWpImageView);
                     }
                 }
@@ -292,7 +343,8 @@ public class CreateTourActivity extends AppCompatActivity {
 
     private void resetSaveButton() {
         btnSaveAndStart.setEnabled(true);
-        btnSaveAndStart.setText("START THE JOURNEY");
+        String status = spnStatus.getSelectedItem().toString();
+        btnSaveAndStart.setText(status.equalsIgnoreCase("Completed") ? "SAVE THE MEMORY" : "START THE JOURNEY");
     }
 
     private void showDatePicker(boolean isStart) {

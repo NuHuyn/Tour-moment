@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  # Container chạy Backend Node.js
+  backend:
+    build: .
+    restart: always
+    environment:
+      # Docker sẽ truyền chuỗi kết nối này vào file server.js của bạn
+      - MONGO_URI=mongodb+srv://huynhtranainu_db_user:tourapp234@cluster0.a281lm4.mongodb.net/newtour?retryWrites=true&w=majority
+    volumes:
+      - ./uploads:/app/uploads
+
+  # Container chạy Nginx làm "Cổng chào"
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80" # Android sẽ gọi vào cổng 80 này
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
