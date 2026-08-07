@@ -1,6 +1,4 @@
-Here is a professional **README.md** written in English, tailored for your GitHub repository and project submission.
 
----
 
 # 🌍 MyCurrentTour - Travel Itinerary Management Platform
 
@@ -17,7 +15,7 @@ Here is a professional **README.md** written in English, tailored for your GitHu
 ### 🖥️ Backend Service
 * **Runtime:** Node.js (Express.js Framework)
 * **Database:** MongoDB
-* **Architecture:** Microservices-oriented design managed via Docker
+* **Architecture:** Containerized backend service with Nginx proxy and MongoDB integration
 
 ### ☁️ Infrastructure & DevOps
 * **Cloud Provider:** Google Cloud Platform (GCP)

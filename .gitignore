@@ -1,0 +1,33 @@
+# Environment files
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Android secrets
+Mycurrenttour/app/google-services.json
+*.jks
+*.keystore
+keystore.properties
+
+# IDE / build artifacts
+*.iml
+.gradle
+/local.properties
+/.idea/
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Backend uploads
+uploads/
+tour-backend/uploads/
