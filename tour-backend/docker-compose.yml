@@ -6,8 +6,8 @@ services:
     build: .
     restart: always
     environment:
-      # Docker sẽ truyền chuỗi kết nối này vào file server.js của bạn
-      - MONGO_URI=mongodb+srv://huynhtranainu_db_user:tourapp234@cluster0.a281lm4.mongodb.net/newtour?retryWrites=true&w=majority
+      - MONGODB_URI=mongodb+srv://huynhtranainu_db_user:tourapp234@cluster0.a281lm4.mongodb.net/newtour?retryWrites=true&w=majority
+      - BASE_URL=http://10.128.0.2
     volumes:
       - ./uploads:/app/uploads
 

@@ -1,10 +1,9 @@
 const mongoose = require("mongoose");
 
 const tourSchema = new mongoose.Schema({
-  // Tham chiếu tới model User
   authorId: { 
     type: String, 
-    ref: "User", // Phải khớp hoàn toàn với tên model trong User.js
+    ref: "User", 
     required: true 
   },
   title: { type: String, required: true },
@@ -12,8 +11,6 @@ const tourSchema = new mongoose.Schema({
   startDate: { type: Date, required: true },
   endDate: { type: Date, default: null },
   imageUrl: String, 
-  
-  // Link video MP4 từ slide ảnh
   videoUrl: { type: String, default: null }, 
 
   status: { 
@@ -33,13 +30,12 @@ const tourSchema = new mongoose.Schema({
     },
     arrivalDate: { type: Date, default: Date.now },
     note: String,
-    photos: [String] // Mảng các link ảnh của chặng này
+    photos: [String]
   }]
 }, { 
-  timestamps: true // Tự động tạo createdAt và updatedAt
+  timestamps: true
 });
 
-// Tạo index địa lý để tìm kiếm vị trí
 tourSchema.index({ "waypoints.coordinate": "2dsphere" });
 
 module.exports = mongoose.model("Tour", tourSchema);
