@@ -29,12 +29,23 @@ import retrofit2.Response;
 
 public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
 
+    /** Callback for actions that need to notify the hosting screen (e.g. MyTourFragment) instead of an Activity cast. */
+    public interface OnTourActionListener {
+        default void onJourneyStarted(Tour tour) {}
+    }
+
     private List<Tour> tourList;
     private boolean isHomePage;
+    private OnTourActionListener listener;
 
     public TourAdapter(List<Tour> tourList, boolean isHomePage) {
+        this(tourList, isHomePage, null);
+    }
+
+    public TourAdapter(List<Tour> tourList, boolean isHomePage, OnTourActionListener listener) {
         this.tourList = tourList;
         this.isHomePage = isHomePage;
+        this.listener = listener;
     }
 
     public void updateList(List<Tour> newList) {
@@ -170,9 +181,7 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
         apiService.updateTour(tour.getId(), tour).enqueue(new Callback<Tour>() {
             @Override
             public void onResponse(Call<Tour> call, Response<Tour> response) {
-                if (v.getContext() instanceof MyTourActivity) {
-                    ((MyTourActivity) v.getContext()).switchFilter("Ongoing");
-                }
+                if (listener != null) listener.onJourneyStarted(tour);
             }
             @Override
             public void onFailure(Call<Tour> call, Throwable t) {}
