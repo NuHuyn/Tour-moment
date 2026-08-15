@@ -1,5 +1,6 @@
 package com.example.mycurrenttour;
 
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,16 +11,29 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.squareup.picasso.Picasso;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class WaypointViewAdapter extends RecyclerView.Adapter<WaypointViewAdapter.ViewHolder> {
+
+    private static final int GREEN = Color.parseColor("#4CAF50");
+    private static final float DISABLED_ALPHA = 0.35f;
 
     private List<Tour.Waypoint> waypointList;
     private OnWaypointClickListener listener;
     private boolean isOngoing;
 
+    // Demo waypoint-lock feature (chưa gắn cổng thanh toán thật): vị trí các waypoint đang bị khóa.
+    // Nguồn dữ liệu: WaypointLockManager, adapter chỉ vẽ theo set này, không tự tính khóa.
+    private Set<Integer> lockedPositions = new HashSet<>();
+
     public interface OnWaypointClickListener {
-        void onWaypointClick(int position);
+        /** Bấm icon chỉ đường (🗺️) - chỉ được gọi khi step đã mở (adapter tự chặn khi đang khóa). */
+        void onNavigateClick(int position);
+        /** Bấm icon ổ khóa của 1 step đang khóa - mở dialog trả 2.000đ cho đúng step đó. */
+        void onLockClick(int position);
     }
 
     public WaypointViewAdapter(List<Tour.Waypoint> waypointList, boolean isOngoing, OnWaypointClickListener listener) {
@@ -28,9 +42,19 @@ public class WaypointViewAdapter extends RecyclerView.Adapter<WaypointViewAdapte
         this.listener = listener;
     }
 
+    /** Cập nhật danh sách vị trí waypoint đang bị khóa và refresh UI. */
+    public void setLockedPositions(Set<Integer> lockedPositions) {
+        this.lockedPositions = lockedPositions != null ? lockedPositions : Collections.emptySet();
+        notifyDataSetChanged();
+    }
+
+    public boolean isLocked(int position) {
+        return lockedPositions.contains(position);
+    }
+
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView txtWaypointInfo, txtWaypointCost, txtWaypointNote;
-        ImageButton btnZoom;
+        ImageButton btnZoom, btnStatus;
         ImageView imgWaypointDetail, imgExpandArrow;
         LinearLayout layoutHeader, layoutDetailContainer;
 
@@ -39,6 +63,7 @@ public class WaypointViewAdapter extends RecyclerView.Adapter<WaypointViewAdapte
             layoutHeader = itemView.findViewById(R.id.layoutHeader);
             txtWaypointInfo = itemView.findViewById(R.id.txtWaypointInfo);
             btnZoom = itemView.findViewById(R.id.btnZoomStep);
+            btnStatus = itemView.findViewById(R.id.btnWaypointStatus);
             imgExpandArrow = itemView.findViewById(R.id.imgExpandArrow);
             layoutDetailContainer = itemView.findViewById(R.id.layoutDetailContainer);
             imgWaypointDetail = itemView.findViewById(R.id.imgWaypointDetail);
@@ -63,17 +88,41 @@ public class WaypointViewAdapter extends RecyclerView.Adapter<WaypointViewAdapte
             String startName = (position == 0) ? "My Location" : waypointList.get(position - 1).getLocationName();
             holder.txtWaypointInfo.setText("Step " + (position + 1) + ": " + startName + " ➔ " + currentWp.getLocationName());
         } else {
+            // Không còn xử lý riêng cho step cuối ("Destination") - mọi step kể cả step cuối
+            // của route đều hiển thị đồng nhất "Step N: tên điểm", danh sách kết thúc tại đó.
             if (position < waypointList.size() - 1) {
                 Tour.Waypoint nextWp = waypointList.get(position + 1);
                 holder.txtWaypointInfo.setText("Step " + (position + 1) + ": " + currentWp.getLocationName() + " ➔ " + nextWp.getLocationName());
             } else {
-                holder.txtWaypointInfo.setText("Destination: " + currentWp.getLocationName());
+                holder.txtWaypointInfo.setText("Step " + (position + 1) + ": " + currentWp.getLocationName());
             }
         }
 
         boolean expanded = currentWp.isExpanded();
         holder.layoutDetailContainer.setVisibility(expanded ? View.VISIBLE : View.GONE);
         holder.imgExpandArrow.setRotation(expanded ? 180 : 0);
+
+        // Demo waypoint-lock: icon ổ khóa xanh (bấm được, mở dialog trả 2.000đ cho step này)
+        // hoặc checkmark xanh (đã mở, không bấm) - đặt cạnh icon chỉ đường.
+        boolean locked = isLocked(position);
+        if (locked) {
+            holder.btnStatus.setImageResource(R.drawable.ic_lock);
+            holder.btnStatus.setColorFilter(GREEN);
+            holder.btnStatus.setOnClickListener(v -> {
+                if (listener != null) listener.onLockClick(position);
+            });
+        } else {
+            holder.btnStatus.setImageResource(R.drawable.ic_check_circle);
+            holder.btnStatus.setColorFilter(GREEN);
+            holder.btnStatus.setOnClickListener(null);
+        }
+
+        // Chặn chỉ đường khi step đang khóa: disable + mờ đi + không phản hồi khi bấm.
+        holder.btnZoom.setEnabled(!locked);
+        holder.btnZoom.setAlpha(locked ? DISABLED_ALPHA : 1f);
+        holder.btnZoom.setOnClickListener(locked ? null : v -> {
+            if (listener != null) listener.onNavigateClick(position);
+        });
 
         holder.txtWaypointCost.setText("Cost: $" + currentWp.getPrice());
         holder.txtWaypointNote.setText("Note: " +
@@ -91,12 +140,6 @@ public class WaypointViewAdapter extends RecyclerView.Adapter<WaypointViewAdapte
         holder.layoutHeader.setOnClickListener(v -> {
             currentWp.setExpanded(!currentWp.isExpanded());
             notifyItemChanged(position);
-        });
-
-        holder.btnZoom.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onWaypointClick(position);
-            }
         });
     }
 

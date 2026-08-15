@@ -38,9 +38,8 @@
 
         <activity android:name=".HomeActivity"/>
         <activity android:name=".TourDetailActivity"/>
-        <activity android:name=".MyTourActivity"/>
-        <activity android:name=".ReelsActivity"/>
         <activity android:name=".OngoingMapActivity"/>
+        <activity android:name=".ChatbotActivity" android:exported="false"/>
 
         <activity android:name=".LoginActivity" />
 
@@ -84,8 +83,8 @@
 
         <activity android:name=".ViewVideoActivity"
             android:exported="false" />
-        <activity android:name=".ProfileActivity" />
-        <activity android:name=".EditProfileActivity" />
+        <!-- ProfileActivity/EditProfileActivity removed: referenced .java files never existed
+             (dead manifest entries). Profile is now ProfileFragment, one of HomeActivity's tabs. -->
 
     </application>
 

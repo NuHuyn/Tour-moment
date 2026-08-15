@@ -27,7 +27,9 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:padding="20dp"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
         <TextView
             android:id="@+id/txtOngoingTitle"
@@ -66,7 +68,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="16dp">
+            android:layout_marginTop="24dp"
+            android:clipChildren="false"
+            android:clipToPadding="false">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBackFromMap"
@@ -80,15 +84,43 @@
                 app:strokeColor="#D1D1D1"
                 app:cornerRadius="12dp"/>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCompleteStep"
+            <!-- Demo waypoint-lock: mở hết toàn bộ waypoint còn khóa (full trip), giảm 25% so với mua lẻ -->
+            <!-- FrameLayout để badge giảm giá đè lên góc trên-phải nút Unlock; ẩn/hiện cùng lúc với nút khi hết hàng chờ khóa -->
+            <FrameLayout
+                android:id="@+id/frameUnlockFull"
                 android:layout_width="0dp"
                 android:layout_height="56dp"
                 android:layout_weight="2"
-                android:text="Complete Step"
-                android:backgroundTint="#2E7D32"
-                android:textColor="#FFFFFF"
-                app:cornerRadius="12dp"/>
+                android:clipChildren="false"
+                android:clipToPadding="false">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnUnlockFull"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="Unlock"
+                    android:backgroundTint="#2E7D32"
+                    android:textColor="#FFFFFF"
+                    app:cornerRadius="12dp"/>
+
+                <!-- Badge "-25%" tự vẽ bằng code (background bo tròn set trong OngoingMapActivity), không dùng ảnh/icon ngoài -->
+                <TextView
+                    android:id="@+id/badgeUnlockDiscount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="-8dp"
+                    android:layout_marginEnd="-6dp"
+                    android:paddingLeft="7dp"
+                    android:paddingRight="7dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
+                    android:text="-25%"
+                    android:textColor="#FFFFFF"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:elevation="6dp"/>
+            </FrameLayout>
         </LinearLayout>
     </LinearLayout>
 

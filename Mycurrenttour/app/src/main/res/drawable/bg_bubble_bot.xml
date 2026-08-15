@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bot bubble: white fill, corners softened + asymmetric (small radius near the avatar) so it
+     reads as a speech bubble rather than a plain rounded rect. Solid fill keeps the default
+     View.OutlineProvider valid, so android:elevation on the TextView still casts a real shadow. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#FFFFFF" />
+    <corners
+        android:topLeftRadius="6dp"
+        android:topRightRadius="18dp"
+        android:bottomRightRadius="18dp"
+        android:bottomLeftRadius="18dp" />
+</shape>

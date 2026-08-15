@@ -30,6 +30,16 @@
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
+            <!-- Demo waypoint-lock: checkmark (mở) hoặc icon ổ khóa xanh (khóa, bấm được để mua),
+                 luôn đặt ngay cạnh icon chỉ đường như ảnh mẫu. -->
+            <ImageButton
+                android:id="@+id/btnWaypointStatus"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_check_circle" />
+
             <ImageButton
                 android:id="@+id/btnZoomStep"
                 android:layout_width="36dp"
