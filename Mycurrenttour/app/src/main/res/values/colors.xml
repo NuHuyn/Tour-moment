@@ -2,4 +2,19 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Splash / Login flow -->
+    <color name="brand_green">#4CAF50</color>
+    <color name="link_light_green">#9CCC65</color>
+    <color name="subtext_light_gray">#E0E0E0</color>
+    <color name="overlay_dark">#B3000000</color>
+
+    <!-- Profile screen -->
+    <color name="screen_bg_gray">#F5F6F8</color>
+    <color name="text_gray">#8A8A8E</color>
+    <color name="divider_gray">#EEEEEE</color>
+    <color name="error_red">#E53935</color>
+
+    <!-- Reels empty state (matches the app's existing primary green used elsewhere, e.g. TourDetailActivity) -->
+    <color name="green_dark_primary">#2E7D32</color>
 </resources>

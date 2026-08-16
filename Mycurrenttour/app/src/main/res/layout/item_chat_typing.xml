@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Bot is typing..." row: same bubble shell as item_chat_bot_message.xml (no avatar), but the
+     bubble holds 3 dots that ChatbotActivity animates in a staggered bounce instead of text.
+     Shown briefly before the real reply lands, then removed from layoutChatMessages. -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layoutTypingBubble"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_bubble_bot"
+    android:elevation="4dp"
+    android:paddingHorizontal="14dp"
+    android:paddingVertical="14dp">
+
+    <View
+        android:id="@+id/dotTyping1"
+        android:layout_width="7dp"
+        android:layout_height="7dp"
+        android:layout_marginEnd="5dp"
+        android:background="@drawable/bg_dot_typing" />
+
+    <View
+        android:id="@+id/dotTyping2"
+        android:layout_width="7dp"
+        android:layout_height="7dp"
+        android:layout_marginEnd="5dp"
+        android:background="@drawable/bg_dot_typing" />
+
+    <View
+        android:id="@+id/dotTyping3"
+        android:layout_width="7dp"
+        android:layout_height="7dp"
+        android:background="@drawable/bg_dot_typing" />
+</LinearLayout>

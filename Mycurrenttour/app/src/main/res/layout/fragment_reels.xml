@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Reels" tab (nav_favorite). Two mutually-exclusive states, toggled in ReelsFragment based on
+     whether the video data source has anything to show:
+       - layoutReelsEmpty: no videos yet (current state - the video feature isn't built out) -
+         clapperboard illustration + "Chưa có video" + CTA back to Discovery.
+       - recyclerFavorite: the existing TikTok-style paged video/photo feed, shown once the data
+         source actually returns items. -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerFavorite"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:visibility="gone" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutReelsEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- Full-bleed illustration, bottom of the z-order - the image already includes the
+             clapperboard art up top, blank space for the text/button in the middle, and the
+             decorative leaves at the bottom, so everything else here is layered on top of it. -->
+        <ImageView
+            android:id="@+id/imgReelsIllustration"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:scaleType="centerCrop"
+            android:contentDescription="@null"
+            android:src="@drawable/bg_reel"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <TextView
+            android:id="@+id/txtReelsHeaderTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="20dp"
+            android:text="Reels"
+            android:textColor="@color/black"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <ImageView
+            android:id="@+id/icReelsSearch"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="20dp"
+            android:padding="2dp"
+            android:contentDescription="Search"
+            android:tint="@color/green_dark_primary"
+            android:src="@drawable/ic_search"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:layout_constraintTop_toTopOf="@id/txtReelsHeaderTitle"
+            app:layout_constraintBottom_toBottomOf="@id/txtReelsHeaderTitle"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Anchors the text/button block into the illustration's blank band, below the
+             clapperboard and above where the bottom leaf decoration starts filling in. -->
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guidelineReelsTextBlock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.60" />
+
+        <TextView
+            android:id="@+id/txtReelsEmptyTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chưa có video"
+            android:textColor="@color/black"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="@id/guidelineReelsTextBlock"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <TextView
+            android:id="@+id/txtReelsEmptySubtitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginHorizontal="40dp"
+            android:gravity="center"
+            android:lineSpacingExtra="2dp"
+            android:text="Tính năng video đang được cập nhật.\nHãy quay lại sau nhé!"
+            android:textColor="@color/text_gray"
+            android:textSize="14sp"
+            app:layout_constraintTop_toBottomOf="@id/txtReelsEmptyTitle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <TextView
+            android:id="@+id/btnExploreTours"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_marginTop="20dp"
+            android:minWidth="180dp"
+            android:paddingHorizontal="28dp"
+            android:gravity="center"
+            android:background="@drawable/bg_pill_green"
+            android:text="Khám phá tour"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintTop_toBottomOf="@id/txtReelsEmptySubtitle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</FrameLayout>

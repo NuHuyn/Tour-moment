@@ -1,14 +1,20 @@
 package com.example.mycurrenttour;
 
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.button.MaterialButton;
 
 import org.osmdroid.bonuspack.routing.OSRMRoadManager;
 import org.osmdroid.bonuspack.routing.Road;
@@ -20,7 +26,9 @@ import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polyline;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class OngoingMapActivity extends AppCompatActivity {
 
@@ -30,6 +38,15 @@ public class OngoingMapActivity extends AppCompatActivity {
     private RecyclerView recyclerWaypoints;
     private WaypointViewAdapter adapter;
     private List<GeoPoint> routePoints = new ArrayList<>();
+    private View frameUnlockFull;
+    private MaterialButton btnUnlockFull;
+    private TextView badgeUnlockDiscount;
+
+    // Demo waypoint-lock feature (chưa gắn cổng thanh toán thật, chỉ mô phỏng UI cho báo cáo đồ án).
+    // Trạng thái khóa lấy từ WaypointLockManager (persist qua SharedPreferences, dùng chung với
+    // TourDetailActivity/Discovery) chứ không tự tính lại từ đầu mỗi lần mở màn nữa.
+    // TODO: thay bằng logic khóa dựa trên thanh toán thật khi có backend.
+    private Set<Integer> lockedWaypoints = new HashSet<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,15 +67,27 @@ public class OngoingMapActivity extends AppCompatActivity {
         displayTourInfo();
 
         findViewById(R.id.btnBackFromMap).setOnClickListener(v -> finish());
-        findViewById(R.id.btnCompleteStep).setOnClickListener(v -> {
-            Toast.makeText(this, "Congratulations! Journey point completed.", Toast.LENGTH_SHORT).show();
-        });
+        // Demo waypoint-lock: nút "Unlock" mở hết toàn bộ waypoint còn khóa (full trip, giảm 25%).
+        btnUnlockFull.setOnClickListener(v -> showFullUnlockDialog());
     }
 
     private void initViews() {
         map = findViewById(R.id.mapOngoing);
         txtTitle = findViewById(R.id.txtOngoingTitle);
         recyclerWaypoints = findViewById(R.id.recyclerOngoingWaypoints);
+        frameUnlockFull = findViewById(R.id.frameUnlockFull);
+        btnUnlockFull = findViewById(R.id.btnUnlockFull);
+        badgeUnlockDiscount = findViewById(R.id.badgeUnlockDiscount);
+        styleDiscountBadge(badgeUnlockDiscount);
+    }
+
+    /** Demo discount badge: vẽ nền chip đỏ bo tròn hoàn toàn bằng code, không dùng ảnh/icon ngoài. */
+    private void styleDiscountBadge(TextView badge) {
+        GradientDrawable bg = new GradientDrawable();
+        bg.setShape(GradientDrawable.RECTANGLE);
+        bg.setColor(Color.parseColor("#E53935"));
+        bg.setCornerRadius(999f); // giá trị lớn -> luôn ra dạng chip oval bất kể kích thước chữ
+        badge.setBackground(bg);
     }
 
     private void setupMap() {
@@ -71,15 +100,96 @@ public class OngoingMapActivity extends AppCompatActivity {
 
     private void setupWaypointList() {
         if (tour.getWaypoints() == null) return;
-        
+
         recyclerWaypoints.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new WaypointViewAdapter(tour.getWaypoints(), true, position -> {
-            if (position + 1 < routePoints.size()) {
-                drawStepRoad(position, position + 1);
-                map.getController().animateTo(routePoints.get(position + 1));
+        adapter = new WaypointViewAdapter(tour.getWaypoints(), true, new WaypointViewAdapter.OnWaypointClickListener() {
+            @Override
+            public void onNavigateClick(int position) {
+                // Chỉ được gọi khi step đã mở (adapter tự chặn khi đang khóa).
+                if (position + 1 < routePoints.size()) {
+                    drawStepRoad(position, position + 1);
+                    map.getController().animateTo(routePoints.get(position + 1));
+                }
+            }
+
+            @Override
+            public void onLockClick(int position) {
+                showStepUnlockDialog(position);
             }
         });
         recyclerWaypoints.setAdapter(adapter);
+
+        refreshLockedState();
+    }
+
+    /** TODO: demo waypoint-lock - đọc lại trạng thái khóa đã lưu (persist theo tourId) và refresh UI. */
+    private void refreshLockedState() {
+        if (tour == null || tour.getWaypoints() == null) return;
+        lockedWaypoints = WaypointLockManager.getLockedPositions(this, tour.getId(), tour.getWaypoints().size());
+        if (adapter != null) adapter.setLockedPositions(lockedWaypoints);
+
+        // Nút "Unlock" + badge "-25%" chỉ hiện khi còn step khóa; hết khóa thì ẩn luôn cả 2 (đã unlock hết, không còn gì để bán).
+        boolean hasLocked = !lockedWaypoints.isEmpty();
+        frameUnlockFull.setVisibility(hasLocked ? View.VISIBLE : View.GONE);
+        btnUnlockFull.setEnabled(hasLocked);
+    }
+
+    /**
+     * TODO: demo waypoint-lock - dialog thanh toán giả lập (chưa gọi API thanh toán thật, không validate gì).
+     * Mở đúng waypoint tại vị trí đã bấm icon ổ khóa, giá cố định 2.000đ/step.
+     */
+    private void showStepUnlockDialog(int position) {
+        if (tour == null || tour.getWaypoints() == null) return;
+        int price = WaypointLockManager.stepPriceVnd();
+
+        showPayDialog("Pay " + price + " vnd to unlock", () -> {
+            WaypointLockManager.unlockWaypoint(this, tour.getId(), position);
+            refreshLockedState();
+            Toast.makeText(this, "Payment successful! Step " + (position + 1) + " unlocked.", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    /**
+     * TODO: demo waypoint-lock - dialog thanh toán giả lập (chưa gọi API thanh toán thật, không validate gì).
+     * Mở hết toàn bộ waypoint còn khóa cùng lúc, giá giảm 25% so với mua lẻ.
+     */
+    private void showFullUnlockDialog() {
+        if (lockedWaypoints.isEmpty() || tour == null || tour.getWaypoints() == null) return;
+        int totalWaypoints = tour.getWaypoints().size();
+        int price = WaypointLockManager.fullUnlockPriceVnd(lockedWaypoints.size());
+
+        showPayDialog("Pay " + price + " vnd to unlock", () -> {
+            WaypointLockManager.unlockAll(this, tour.getId(), totalWaypoints);
+            refreshLockedState();
+            Toast.makeText(this, "Payment successful! All waypoints unlocked.", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    /** Dialog Pay dùng chung cho cả 2 trường hợp mở 1 step lẻ và mở full trip - khác nhau ở amountText + onPaid. */
+    private void showPayDialog(String amountText, Runnable onPaid) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_unlock_waypoint, null);
+        TextView txtAmount = dialogView.findViewById(R.id.txtUnlockAmount);
+        MaterialButton btnCancel = dialogView.findViewById(R.id.btnCancelUnlock);
+        MaterialButton btnPay = dialogView.findViewById(R.id.btnPay);
+
+        txtAmount.setText(amountText);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setCancelable(true)
+                .create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        btnPay.setOnClickListener(v -> {
+            // Demo: không gọi API thanh toán thật, không validate gì - coi như thành công ngay lập tức.
+            onPaid.run();
+            dialog.dismiss();
+        });
+
+        dialog.show();
     }
 
     private void displayTourInfo() {

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom nav icon tint: white on the active tab (it sits on top of the solid green indicator
+     pill - see ActiveIndicator.MyCurrentTour in themes.xml), gray otherwise. Label text uses a
+     separate selector (bottom_nav_item_color.xml) since it stays green-on-checked, not white. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/white" android:state_checked="true" />
+    <item android:color="#9E9E9E" />
+</selector>

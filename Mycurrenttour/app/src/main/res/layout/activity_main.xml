@@ -1,35 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<!--
+    Splash screen: shown briefly on launch, then MainActivity auto-navigates to LoginActivity.
+    Full-screen background image with a green indeterminate progress indicator near the bottom.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:layout_height="match_parent">
 
     <ImageView
-        android:id="@+id/imgBackground"
-        android:layout_width="match_parent"
-        android:layout_height="450dp"
+        android:id="@+id/imgSplashBackground"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:scaleType="centerCrop"
-        android:src="@drawable/centralvietnam"/>
+        android:contentDescription="@null"
+        android:src="@drawable/splash_bg"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <TextView
-        android:id="@+id/titleText"
-        android:layout_below="@id/imgBackground"
-        android:layout_marginTop="20dp"
-        android:text="Let's Enjoy The Beautiful World"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_centerHorizontal="true"
+    <ProgressBar
+        android:id="@+id/splashProgressBar"
+        style="?android:attr/progressBarStyleLarge"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        android:indeterminateTint="@color/brand_green"
+        android:indeterminateTintMode="src_in"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="64dp" />
 
-    <Button
-        android:id="@+id/btnStart"
-        android:text="Get Started"
-        android:layout_below="@id/titleText"
-        android:layout_marginTop="25dp"
-        android:layout_centerHorizontal="true"
-        android:layout_width="200dp"
-        android:layout_height="wrap_content"/>
-
-</RelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

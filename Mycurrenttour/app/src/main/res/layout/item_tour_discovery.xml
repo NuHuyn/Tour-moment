@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Discovery tab's "All Tours" card only (TourAdapter, isHomePage=true) - image-left/info-right
+     row instead of item_tour.xml's image-top/info-below stack, bigger corner rounding, pill
+     outline "+Add this Tour" button. Same view IDs as item_tour.xml (author badge, title, price,
+     the 3 status-only buttons) so TourAdapter's ViewHolder/onBindViewHolder work completely
+     unchanged - MyTourFragment (isHomePage=false) keeps using item_tour.xml as before; nothing
+     about the binding logic changes, only which layout resource gets inflated. -->
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="3dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="10dp">
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/imgTourLogItem"
+            android:layout_width="104dp"
+            android:layout_height="104dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/centralvietnam"
+            app:shapeAppearanceOverlay="@style/RoundedCorner12dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:id="@+id/layoutAuthorInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/imgAuthorItem"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:scaleType="centerCrop"
+                    app:shapeAppearanceOverlay="@style/CircleImage"
+                    android:src="@drawable/ic_person" />
+
+                <TextView
+                    android:id="@+id/txtAuthorNameItem"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:text="User Name"
+                    android:textColor="#757575"
+                    android:textSize="11sp" />
+
+                <!-- Decorative "official/verified" badge, matches the reference design -
+                     purely stylistic, same icon already used elsewhere in the app; not backed by
+                     an actual per-author verified field on Tour.UserDetails. -->
+                <ImageView
+                    android:layout_width="13dp"
+                    android:layout_height="13dp"
+                    android:layout_marginStart="3dp"
+                    android:src="@drawable/ic_check_circle"
+                    android:contentDescription="@null"
+                    android:importantForAccessibility="no" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/txtLogTourNameItem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Trip name"
+                android:textColor="#212121"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:maxLines="2"
+                android:ellipsize="end" />
+
+            <!-- Duration - destination line (e.g. "3N2Đ - Quy Nhơn"), derived from the tour's
+                 own startDate/endDate + first waypoint's locationName in TourAdapter - no new
+                 data source, hidden if that data isn't available. -->
+            <TextView
+                android:id="@+id/txtTourMetaItem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="3N2Đ - Quy Nhơn"
+                android:textColor="#757575"
+                android:textSize="12sp" />
+
+            <!-- Only shown for MyTour statuses (item_tour.xml's non-home branch), never for
+                 Discovery cards - kept here purely so TourAdapter's findViewById doesn't NPE. -->
+            <TextView
+                android:id="@+id/txtLogDateItem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Start date"
+                android:textColor="#757575"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+            <!-- Price (left) + "+Add this Tour" pill (right) on the same row, matching the
+                 reference layout. Same txtLogExpenseItem/btnAddTourItem ids and the same
+                 TourAdapter binding logic - only the container arrangement changed. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/txtLogExpenseItem"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Total cost: $0"
+                    android:textColor="#757575"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/btnAddTourItem"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill_outline_green"
+                    android:gravity="center"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="6dp"
+                    android:text="+ Add this Tour"
+                    android:textColor="@color/green_dark_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- MyTour-only buttons, never shown on Discovery cards - present so
+                 TourAdapter.ViewHolder's findViewById calls don't NPE. -->
+            <TextView
+                android:id="@+id/btnShareToPublicItem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/btnStartJourneyItem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/btnMemorableVideoItem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

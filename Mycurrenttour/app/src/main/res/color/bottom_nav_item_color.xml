@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom nav icon + label tint: active tab turns green (icon and text together), inactive
+     tabs stay gray. No pill/circle highlight is used - see itemActiveIndicatorColor="transparent"
+     on the BottomNavigationView in activity_home.xml. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/brand_green" android:state_checked="true" />
+    <item android:color="#9E9E9E" />
+</selector>
