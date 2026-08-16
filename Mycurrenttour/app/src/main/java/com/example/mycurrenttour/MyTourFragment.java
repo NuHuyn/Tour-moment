@@ -6,7 +6,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.ScrollView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -15,6 +15,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.chip.Chip;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -30,7 +31,7 @@ import retrofit2.Response;
  * HomeActivity's fragmentContainer so the bottom nav bar stays fixed across tabs.
  */
 public class MyTourFragment extends Fragment implements TourAdapter.OnTourActionListener {
-    private Button btnTrip, btnUpcoming, btnOngoing, btnCompleted;
+    private Chip btnTrip, btnUpcoming, btnOngoing, btnCompleted;
     private RecyclerView recyclerMyTours;
     private TourAdapter adapter;
     private List<Tour> allToursFromApi = new ArrayList<>();
@@ -64,6 +65,8 @@ public class MyTourFragment extends Fragment implements TourAdapter.OnTourAction
         recyclerMyTours.setLayoutManager(new LinearLayoutManager(getContext()));
         adapter = new TourAdapter(new ArrayList<>(), false, this);
         recyclerMyTours.setAdapter(adapter);
+
+        BottomNavScrollHelper.attach((ScrollView) root.findViewById(R.id.scrollMyTour), (HomeActivity) requireActivity());
     }
 
     private void setupClickListeners() {

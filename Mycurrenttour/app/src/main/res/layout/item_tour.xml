@@ -1,42 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- "My Tour" tab card (TourAdapter, isHomePage=false) - image-left/info-right row, mirroring
+     Discovery's item_tour_discovery.xml layout pattern. Same view IDs as item_tour_discovery.xml
+     (title, meta, price, date, the author badge, all 4 status-only buttons) so TourAdapter's
+     ViewHolder/onBindViewHolder work completely unchanged - only which layout resource gets
+     inflated, and this card's own styling, differ.
+
+     Row is a ConstraintLayout (not a horizontal LinearLayout+match_parent column) so the info
+     side can BOTH grow taller than imgTourLogItem's 190dp when content needs it, AND still flush
+     its action button(s) to the card's bottom-right when content is short:
+       - textBlockItem (title/meta/date/price) is top-anchored, wrap_content - takes whatever
+         height its content needs, no cap.
+       - actionButtonsItem (Start journey / Share+Memorable video) is anchored between
+         textBlockItem's bottom and the parent's bottom, wrap_content, with
+         layout_constraintVertical_bias="1.0" pushing it to sit flush at the very bottom of
+         whatever space is available - the natural gap above it is whatever's left over.
+       - Because actionButtonsItem's top is chained to textBlockItem's bottom, the ConstraintLayout
+         (wrap_content) grows to fit BOTH stacked heights when they exceed 190dp (Completed's 2
+         stacked buttons) instead of forcing everything into imgTourLogItem's fixed height and
+         clipping the overflow - which is what a horizontal LinearLayout with the info column set
+         to match_parent used to do (silently cut off the bottom of "Memorable video", hard-edged
+         with no rounded corner - a real clipping bug, not the bottom nav bar overlapping it).
+       - For short content (Upcoming: title+meta+price+1 pill button, well under 190dp), the row's
+         height is instead driven by imgTourLogItem (190dp, the tallest sibling), and the bias
+         pushes actionButtonsItem down to that bottom edge, reproducing the old
+         Space+weight="1" trick's "big gap under the price, button flush at the card's bottom-right
+         corner" look without needing that Space at all. -->
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="4dp">
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="10dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="3dp">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:padding="14dp">
 
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="180dp">
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/imgTourLogItem"
+            android:layout_width="0dp"
+            android:layout_height="190dp"
+            app:layout_constraintWidth_percent="0.37"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/centralvietnam"
+            app:shapeAppearanceOverlay="@style/RoundedCorner16dp" />
 
-            <ImageView
-                android:id="@+id/imgTourLogItem"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="centerCrop"
-                android:src="@drawable/centralvietnam" />
+        <!-- Text block: natural height, top-aligned, never capped. -->
+        <LinearLayout
+            android:id="@+id/textBlockItem"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical"
+            app:layout_constraintStart_toEndOf="@id/imgTourLogItem"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
+            <!-- Discovery-card-only (item_tour_discovery.xml) - kept here just so
+                 TourAdapter's shared ViewHolder findViewById doesn't NPE; both children are
+                 always GONE for My Tour cards (reset in TourAdapter#onBindViewHolder). -->
             <LinearLayout
                 android:id="@+id/layoutAuthorInfo"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                android:background="@drawable/bg_author_tag"
                 android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="4dp">
+                android:orientation="horizontal">
 
                 <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/imgAuthorItem"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:scaleType="centerCrop"
                     app:shapeAppearanceOverlay="@style/CircleImage"
                     android:src="@drawable/ic_person" />
@@ -45,20 +83,11 @@
                     android:id="@+id/txtAuthorNameItem"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:layout_marginEnd="8dp"
+                    android:layout_marginStart="5dp"
                     android:text="User Name"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:textColor="#757575"
+                    android:textSize="11sp" />
             </LinearLayout>
-        </RelativeLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="12dp">
 
             <TextView
                 android:id="@+id/txtLogTourNameItem"
@@ -66,61 +95,82 @@
                 android:layout_height="wrap_content"
                 android:text="Trip name"
                 android:textColor="#212121"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:textSize="19sp"
+                android:textStyle="bold"
+                android:lineSpacingMultiplier="0.95"
+                android:maxLines="2"
+                android:ellipsize="end" />
+
+            <!-- "3N2Đ - Quy Nhơn" - see TourAdapter#buildDurationDestination(). -->
+            <TextView
+                android:id="@+id/txtTourMetaItem"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="#757575"
+                android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/txtLogDateItem"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:text="Start date"
                 android:textColor="#757575"
-                android:textSize="14sp" />
+                android:textSize="12sp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/txtLogExpenseItem"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
                 android:text="Total cost: $0"
-                android:textColor="#757575"
-                android:textSize="14sp" />
+                android:textColor="#212121"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
+        <!-- Action button(s): flush to the card's bottom-right - see file header comment. -->
+        <LinearLayout
+            android:id="@+id/actionButtonsItem"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical"
+            app:layout_constraintStart_toEndOf="@id/imgTourLogItem"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/textBlockItem"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintVertical_bias="1.0">
+
+            <!-- Upcoming: outline pill, bottom-end of the card. -->
+            <TextView
+                android:id="@+id/btnStartJourneyItem"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:background="@drawable/bg_pill_outline_green"
+                android:gravity="center"
+                android:paddingHorizontal="24dp"
+                android:paddingVertical="12dp"
+                android:text="Start the journey"
+                android:textColor="@color/green_dark_primary"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <!-- Completed only - unchanged block style, just narrower now that it shares the row
+                 with the image instead of spanning the whole card. -->
             <TextView
                 android:id="@+id/btnShareToPublicItem"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="8dp"
                 android:background="@drawable/bg_button_share"
                 android:gravity="center"
                 android:padding="10dp"
                 android:text="Share journey to public"
-                android:textColor="#FFFFFF"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/btnAddTourItem"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_button_add"
-                android:gravity="center"
-                android:padding="10dp"
-                android:text="+ Add this Tour"
-                android:textColor="#FFFFFF"
-                android:textStyle="bold"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/btnStartJourneyItem"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_button_share"
-                android:backgroundTint="#4CAF50"
-                android:gravity="center"
-                android:padding="10dp"
-                android:text="Start the journey"
                 android:textColor="#FFFFFF"
                 android:textStyle="bold"
                 android:visibility="gone" />
@@ -135,7 +185,18 @@
                 android:padding="10dp"
                 android:text="Memorable video"
                 android:textColor="#FFFFFF"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:visibility="gone" />
         </LinearLayout>
-    </LinearLayout>
+
+        <!-- Discovery-only ("+ Add this Tour") - never shown here, kept so
+             TourAdapter's findViewById doesn't NPE. -->
+        <TextView
+            android:id="@+id/btnAddTourItem"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.cardview.widget.CardView>

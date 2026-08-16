@@ -55,7 +55,7 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView imgTour, imgAuthor;
-        TextView txtTitle, txtPrice, txtStartDate, txtAuthorName;
+        TextView txtTitle, txtPrice, txtStartDate, txtAuthorName, txtMeta;
         TextView btnShareToPublic, btnMemorableVideo, btnAddTour, btnStartJourney;
 
         public ViewHolder(View itemView) {
@@ -64,6 +64,7 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
             txtTitle = itemView.findViewById(R.id.txtLogTourNameItem);
             txtPrice = itemView.findViewById(R.id.txtLogExpenseItem);
             txtStartDate = itemView.findViewById(R.id.txtLogDateItem);
+            txtMeta = itemView.findViewById(R.id.txtTourMetaItem);
 
             // Author views
             txtAuthorName = itemView.findViewById(R.id.txtAuthorNameItem);
@@ -80,8 +81,12 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        // Discovery's "All Tours" list (isHomePage) and MyTourFragment's "My Travel" list each
+        // have their own image-left/info-right card (item_tour_discovery.xml / item_tour.xml)
+        // with the same view IDs, so the rest of this class is unaware of which one got inflated.
+        int layoutRes = isHomePage ? R.layout.item_tour_discovery : R.layout.item_tour;
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_tour, parent, false);
+                .inflate(layoutRes, parent, false);
         return new ViewHolder(view);
     }
 
@@ -103,13 +108,23 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
         holder.btnMemorableVideo.setVisibility(View.GONE);
         holder.txtAuthorName.setVisibility(View.GONE);
         holder.imgAuthor.setVisibility(View.GONE);
+        if (holder.txtMeta != null) holder.txtMeta.setVisibility(View.GONE);
+
+        // "3N2Đ - Quy Nhơn" - same data-derived meta line on both Discovery and My Tour cards.
+        if (holder.txtMeta != null) {
+            String meta = buildDurationDestination(tour);
+            if (meta != null) {
+                holder.txtMeta.setText(meta);
+                holder.txtMeta.setVisibility(View.VISIBLE);
+            }
+        }
 
         String status = tour.getStatus() != null ? tour.getStatus().trim() : "";
 
         // 2. Logic
         if (isHomePage) {
-            holder.txtPrice.setText("Estimated cost: $" + tour.getTotalPrice());
-            holder.txtPrice.setTextColor(Color.RED);
+            holder.txtPrice.setText(formatPriceVnd(tour.getTotalPrice()));
+            holder.txtPrice.setTextColor(Color.parseColor("#212121"));
             holder.txtPrice.setTypeface(null, Typeface.BOLD);
 
             holder.txtAuthorName.setVisibility(View.VISIBLE);
@@ -134,8 +149,8 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
 
         } else {
             if (status.equalsIgnoreCase("Upcoming")) {
-                holder.txtPrice.setText("Estimated cost: $" + tour.getTotalPrice());
-                holder.txtPrice.setTextColor(Color.RED);
+                holder.txtPrice.setText(formatPriceVnd(tour.getTotalPrice()));
+                holder.txtPrice.setTextColor(Color.parseColor("#212121"));
                 holder.txtPrice.setTypeface(null, Typeface.BOLD);
 
                 holder.btnStartJourney.setVisibility(View.VISIBLE);
@@ -146,8 +161,8 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
                 holder.txtStartDate.setVisibility(View.VISIBLE);
                 String dr = "Date: " + formatDate(tour.getStartDate()) + " - " + formatDate(tour.getEndDate());
                 holder.txtStartDate.setText(dr);
-                holder.txtPrice.setText("Estimated cost: $" + tour.getTotalPrice());
-                holder.txtPrice.setTextColor(Color.RED);
+                holder.txtPrice.setText(formatPriceVnd(tour.getTotalPrice()));
+                holder.txtPrice.setTextColor(Color.parseColor("#212121"));
                 holder.txtPrice.setTypeface(null, Typeface.BOLD);
 
                 holder.btnShareToPublic.setVisibility(View.VISIBLE);
@@ -160,7 +175,7 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
             } else {
                 holder.txtStartDate.setVisibility(View.VISIBLE);
                 holder.txtStartDate.setText("Start date: " + formatDate(tour.getStartDate()));
-                holder.txtPrice.setText("Cost: $" + tour.getTotalPrice());
+                holder.txtPrice.setText("Cost: " + formatPriceVnd(tour.getTotalPrice()));
             }
         }
 
@@ -240,6 +255,51 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
         if (holder.btnShareToPublic == null) return;
         holder.btnShareToPublic.setText(isShared ? "Shared" : "Share to public");
         holder.btnShareToPublic.getBackground().setTint(isShared ? Color.parseColor("#2E7D32") : Color.parseColor("#D32F2F"));
+    }
+
+    /** Builds the "3N2Đ - Quy Nhơn" meta line shown on both Discovery and My Tour cards, from data
+     *  the Tour already carries - no new fields: nights from startDate/endDate (same ISO parsing
+     *  as formatDate()), destination from the first waypoint's locationName (its part after the
+     *  last " - ", e.g. "Chợ nổi Cái Răng - Cần Thơ" -> "Cần Thơ"). Returns null if neither part
+     *  is available. */
+    private String buildDurationDestination(Tour tour) {
+        String duration = null;
+        try {
+            SimpleDateFormat in = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault());
+            in.setTimeZone(TimeZone.getTimeZone("UTC"));
+            Date start = in.parse(tour.getStartDate());
+            Date end = in.parse(tour.getEndDate());
+            long nights = (end.getTime() - start.getTime()) / (24L * 60 * 60 * 1000);
+            if (nights > 0) duration = (nights + 1) + "N" + nights + "Đ";
+        } catch (Exception ignored) {}
+
+        String destination = null;
+        if (tour.getWaypoints() != null && !tour.getWaypoints().isEmpty()) {
+            String locationName = tour.getWaypoints().get(0).getLocationName();
+            if (locationName != null && !locationName.trim().isEmpty()) {
+                int dashIndex = locationName.lastIndexOf(" - ");
+                destination = dashIndex >= 0 ? locationName.substring(dashIndex + 3) : locationName;
+            }
+        }
+
+        if (duration != null && destination != null) return duration + " - " + destination;
+        if (destination != null) return destination;
+        return duration;
+    }
+
+    /** "2999000" -> "2.999.000đ" - VND display format (dot-grouped, no decimals), matching the
+     *  target design. Grouped manually instead of via NumberFormat/vi-VN Locale so it doesn't
+     *  depend on the device's ICU data for a locale the app doesn't otherwise use. */
+    private String formatPriceVnd(int amount) {
+        String digits = String.valueOf(Math.abs(amount));
+        StringBuilder sb = new StringBuilder();
+        int count = 0;
+        for (int i = digits.length() - 1; i >= 0; i--) {
+            sb.append(digits.charAt(i));
+            count++;
+            if (count % 3 == 0 && i != 0) sb.append('.');
+        }
+        return (amount < 0 ? "-" : "") + sb.reverse() + "đ";
     }
 
     private String formatDate(String dateStr) {

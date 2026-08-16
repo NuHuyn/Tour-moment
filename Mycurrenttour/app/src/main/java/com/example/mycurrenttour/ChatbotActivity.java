@@ -20,6 +20,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -45,13 +46,16 @@ import java.util.Locale;
 public class ChatbotActivity extends AppCompatActivity {
 
     private static final String[] QUICK_REPLIES = {
-            "Địa điểm ăn uống", "Tour giá rẻ", "Đi 1 mình", "Tour gần đây"
+            "Gợi ý lịch trình 2N1Đ", "Địa điểm check-in đẹp", "Quán ăn ngon", "Chi phí dự kiến"
     };
 
     private LinearLayout layoutChatMessages;
     private ScrollView scrollChatMessages;
     private EditText edtChatInput;
-    private View scrollQuickReplies;
+    // Quick-reply chip row - lives inline in layoutChatMessages (added right after the greeting
+    // bubble), not a fixed bottom bar. Tracked here so hideQuickReplies() can remove it once the
+    // user sends their first message.
+    private View quickRepliesRow;
     private final Handler chatHandler = new Handler(Looper.getMainLooper());
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
     // Typing-dot bounce animators run on an infinite repeat, so they must be tracked and cancelled
@@ -66,10 +70,11 @@ public class ChatbotActivity extends AppCompatActivity {
         layoutChatMessages = findViewById(R.id.layoutChatMessages);
         scrollChatMessages = findViewById(R.id.scrollChatMessages);
         edtChatInput = findViewById(R.id.edtChatInput);
-        scrollQuickReplies = findViewById(R.id.scrollQuickReplies);
         ImageView btnSendChat = findViewById(R.id.btnSendChat);
 
         findViewById(R.id.btnChatBack).setOnClickListener(v -> finish());
+        findViewById(R.id.btnChatMenu).setOnClickListener(v ->
+                Toast.makeText(this, "Menu: coming soon", Toast.LENGTH_SHORT).show());
         btnSendChat.setOnClickListener(v -> sendChatMessage());
         edtChatInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEND || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
@@ -79,7 +84,7 @@ public class ChatbotActivity extends AppCompatActivity {
             return false;
         });
 
-        addBotBubble("Xin chào! Mình là Trip Assistant. Bạn cần giúp gì cho chuyến đi sắp tới?");
+        addBotBubble("Xin chào! Mình có thể hỗ trợ gì cho chuyến đi của bạn hôm nay? 🌿");
         setupQuickReplies();
     }
 
@@ -111,11 +116,17 @@ public class ChatbotActivity extends AppCompatActivity {
     }
 
     /** Quick-reply chips shown only for the empty state (before the user's first message) -
-     *  tapping one fills the input and sends it immediately, same as typing it out. */
+     *  added inline into layoutChatMessages right under the greeting bubble, so they scroll as
+     *  part of the conversation rather than sitting pinned above the input bar. Stacked one per
+     *  row, full width, in QUICK_REPLIES order - no horizontal scrolling/clipping. Tapping one
+     *  fills the input and sends it immediately, same as typing it out. */
     private void setupQuickReplies() {
-        LinearLayout layoutQuickReplies = findViewById(R.id.layoutQuickReplies);
-        int strokeColor = Color.parseColor("#2E7D32");
+        LinearLayout chipColumn = new LinearLayout(this);
+        chipColumn.setOrientation(LinearLayout.VERTICAL);
+        chipColumn.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
+        int strokeColor = Color.parseColor("#2E7D32");
         for (String suggestion : QUICK_REPLIES) {
             Chip chip = new Chip(this);
             chip.setText(suggestion);
@@ -125,24 +136,37 @@ public class ChatbotActivity extends AppCompatActivity {
             chip.setChipStrokeWidth(dp(1));
             chip.setTextColor(strokeColor);
             chip.setTextSize(13);
+            chip.setEnsureMinTouchTargetSize(false);
 
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            lp.setMarginEnd(dp(8));
-            chip.setLayoutParams(lp);
+            LinearLayout.LayoutParams chipLp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            chipLp.topMargin = dp(6);
+            chip.setLayoutParams(chipLp);
 
             chip.setOnClickListener(v -> {
                 edtChatInput.setText(suggestion);
                 sendChatMessage();
             });
-            layoutQuickReplies.addView(chip);
+            chipColumn.addView(chip);
         }
+
+        LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) chipColumn.getLayoutParams();
+        lp.gravity = Gravity.START;
+        lp.topMargin = dp(4);
+        chipColumn.setLayoutParams(lp);
+
+        quickRepliesRow = chipColumn;
+        layoutChatMessages.addView(quickRepliesRow);
+        animateIn(quickRepliesRow);
+        scrollChatToBottom();
     }
 
     private void hideQuickReplies() {
-        if (scrollQuickReplies.getVisibility() != View.VISIBLE) return;
-        scrollQuickReplies.animate().alpha(0f).setDuration(150)
-                .withEndAction(() -> scrollQuickReplies.setVisibility(View.GONE)).start();
+        if (quickRepliesRow == null || quickRepliesRow.getParent() == null) return;
+        View row = quickRepliesRow;
+        quickRepliesRow = null;
+        row.animate().alpha(0f).setDuration(150)
+                .withEndAction(() -> layoutChatMessages.removeView(row)).start();
     }
 
     /** Bot bubble - avatar + bubble + timestamp row (item_chat_bot_message.xml), left-aligned. */

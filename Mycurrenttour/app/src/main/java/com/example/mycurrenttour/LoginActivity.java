@@ -2,9 +2,17 @@ package com.example.mycurrenttour;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
+import android.text.style.ForegroundColorSpan;
+import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
@@ -12,104 +20,100 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.AuthCredential;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.GoogleAuthProvider;
 
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-
+/**
+ * Login screen (demo build - no backend).
+ * "Continue with Google" triggers a real on-device Google account picker purely to read the
+ * chosen account's name/email/photo (no Firebase Auth, no server call) so ProfileFragment has a
+ * real avatar to show. "Continue as Guest" just records that choice. Both then land on Home.
+ */
 public class LoginActivity extends AppCompatActivity {
-    CardView btnGoogleSignIn;
-    FirebaseAuth mAuth;
-    GoogleSignInClient mGoogleSignInClient;
-    ApiService apiService;
-    int RC_SIGN_IN = 100;
+
+    private static final int RC_SIGN_IN = 100;
+
+    private GoogleSignInClient googleSignInClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        mAuth = FirebaseAuth.getInstance();
-
-
-        apiService = ApiClient.getClient().create(ApiService.class);
-
-
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-
-                .requestIdToken("312403546799-hjn39b9pu5c5aquisn640orj81qatqub.apps.googleusercontent.com")
                 .requestEmail()
+                .requestProfile()
                 .build();
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+        googleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        btnGoogleSignIn = findViewById(R.id.btnGoogleSignIn);
-        btnGoogleSignIn.setOnClickListener(v -> {
-            Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-            startActivityForResult(signInIntent, RC_SIGN_IN);
+        findViewById(R.id.btnGoogleSignIn).setOnClickListener(v ->
+                startActivityForResult(googleSignInClient.getSignInIntent(), RC_SIGN_IN));
+        findViewById(R.id.btnGuest).setOnClickListener(v -> {
+            SessionManager.saveGuestSession(this);
+            goToHome();
         });
+
+        setupFooter();
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == RC_SIGN_IN) {
-            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            try {
-                GoogleSignInAccount account = task.getResult(ApiException.class);
-                firebaseAuthWithGoogle(account.getIdToken());
-            } catch (ApiException e) {
-                Toast.makeText(this, "Error: " + e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-            }
+        if (requestCode != RC_SIGN_IN) return;
+
+        Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+        try {
+            GoogleSignInAccount account = task.getResult(ApiException.class);
+            SessionManager.saveGoogleSession(
+                    this,
+                    account.getDisplayName(),
+                    account.getEmail(),
+                    account.getPhotoUrl() != null ? account.getPhotoUrl().toString() : null);
+            goToHome();
+        } catch (ApiException e) {
+            Toast.makeText(this, "Google sign-in cancelled", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void firebaseAuthWithGoogle(String idToken) {
-        AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
-        mAuth.signInWithCredential(credential)
-                .addOnCompleteListener(this, task -> {
-                    if (task.isSuccessful()) {
-                        FirebaseUser firebaseUser = mAuth.getCurrentUser();
-                        if (firebaseUser != null) {
-
-                            syncUserToBackend(firebaseUser);
-                        }
-                    } else {
-                        Toast.makeText(this, "Firebase authentication failed", Toast.LENGTH_SHORT).show();
-                    }
-                });
+    private void goToHome() {
+        startActivity(new Intent(LoginActivity.this, HomeActivity.class));
+        finish();
     }
 
-    private void syncUserToBackend(FirebaseUser firebaseUser) {
+    private void setupFooter() {
+        TextView tvFooter = findViewById(R.id.tvFooter);
 
-        User userRequest = new User();
-        userRequest.setGoogleId(firebaseUser.getUid());
-        userRequest.setDisplayName(firebaseUser.getDisplayName());
-        userRequest.setEmail(firebaseUser.getEmail());
-        userRequest.setPhotoUrl(firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : "");
-        userRequest.setRole("customer");
+        String prefix = "By continuing, you agree to our ";
+        String terms = "Terms of Service";
+        String and = " and ";
+        String privacy = "Privacy Policy";
+        String full = prefix + terms + and + privacy;
 
+        SpannableString spannable = new SpannableString(full);
+        int linkColor = ContextCompat.getColor(this, R.color.link_light_green);
 
-        apiService.googleLogin(userRequest).enqueue(new Callback<User>() {
+        int termsStart = prefix.length();
+        int termsEnd = termsStart + terms.length();
+        int privacyStart = termsEnd + and.length();
+        int privacyEnd = privacyStart + privacy.length();
+
+        spannable.setSpan(new ForegroundColorSpan(linkColor), termsStart, termsEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        spannable.setSpan(new ClickableSpan() {
             @Override
-            public void onResponse(Call<User> call, Response<User> response) {
-                if (response.isSuccessful()) {
-
-                    Toast.makeText(LoginActivity.this, "Welcome " + response.body().getDisplayName(), Toast.LENGTH_SHORT).show();
-                    startActivity(new Intent(LoginActivity.this, HomeActivity.class));
-                    finish();
-                } else {
-                    Toast.makeText(LoginActivity.this, "Error saving user to the database!", Toast.LENGTH_SHORT).show();
-                }
+            public void onClick(View widget) {
+                Toast.makeText(LoginActivity.this, "Terms of Service", Toast.LENGTH_SHORT).show();
             }
+        }, termsStart, termsEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
 
+        spannable.setSpan(new ForegroundColorSpan(linkColor), privacyStart, privacyEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        spannable.setSpan(new ClickableSpan() {
             @Override
-            public void onFailure(Call<User> call, Throwable t) {
-                Toast.makeText(LoginActivity.this, "Unable to connect to the server!", Toast.LENGTH_SHORT).show();
+            public void onClick(View widget) {
+                Toast.makeText(LoginActivity.this, "Privacy Policy", Toast.LENGTH_SHORT).show();
             }
-        });
+        }, privacyStart, privacyEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        tvFooter.setText(spannable);
+        tvFooter.setMovementMethod(LinkMovementMethod.getInstance());
+        tvFooter.setHighlightColor(android.graphics.Color.TRANSPARENT);
+        tvFooter.setTextColor(ContextCompat.getColor(this, R.color.subtext_light_gray));
     }
 }

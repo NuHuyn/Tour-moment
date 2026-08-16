@@ -2,10 +2,22 @@
 <!-- Discovery tab (was activity_home.xml's content). Hosted inside HomeActivity's
      fragmentContainer so the bottom nav bar stays fixed across all tabs.
 
+     Header art (bg_discovery) is a FIXED sibling behind the NestedScrollView (lowest z-order,
+     not part of the scrolling column), covering the header zone (search bar and up). Its alpha
+     is driven by DiscoveryFragment's NestedScrollView scroll listener - fully visible at
+     scrollY=0, linearly fading to 0 by HEADER_FADE_DISTANCE_DP (see DiscoveryFragment), so it
+     dissolves away smoothly instead of either staying pinned under scrolling content (rendering
+     glitches where transparent gaps let it show through) or scrolling rigidly with the content
+     column (forcing a hard-edged opaque backing to avoid the same bleed-through). Everything else
+     (greeting, search bar, chips, Popular, All Tours) is one plain scrolling column -
+     recyclerTours (All Tours) is wrap_content height with nested scrolling disabled in
+     DiscoveryFragment so it defers scroll/fling to the NestedScrollView instead of owning its own
+     independent scroll. No data/filtering logic changed, this file is UI-only.
+
      The chatbot FAB + chat panel below are part of THIS fragment's own view tree only
      (not activity_home.xml, which is shared by every tab) - so switching tabs destroys this
      view and the chatbot disappears with it, exactly as intended. -->
-<FrameLayout
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -15,60 +27,117 @@
     android:clipChildren="false"
     android:clipToPadding="false">
 
+    <!-- Fixed header art - see file header comment. Height must match
+         DiscoveryFragment.HEADER_FADE_DISTANCE_DP. -->
+    <ImageView
+        android:id="@+id/imgDiscoveryHeaderBg"
+        android:layout_width="0dp"
+        android:layout_height="320dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/bg_discovery"
+        android:contentDescription="@null"
+        android:importantForAccessibility="no"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollDiscoveryContent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        android:clipToPadding="false"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
     <LinearLayout
         android:orientation="vertical"
         android:padding="16dp"
+        android:paddingBottom="140dp"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content">
 
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
-            <TextView
-                android:id="@+id/txtWelcome"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Welcome back"
-                android:textSize="14sp"
-                android:textColor="#666666" />
-            <ImageView
-                android:id="@+id/imgProfile"
-                android:layout_width="35dp"
-                android:layout_height="35dp"
-                android:layout_alignParentEnd="true"
-                android:src="@drawable/ic_person"
-                android:scaleType="centerCrop" />
-        </RelativeLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Discover the Best Place"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="#1B5E20"
-            android:layout_marginTop="8dp" />
+            <!-- Fixed top-right corner, independent of how tall the greeting text block grows. -->
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/imgProfile"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentEnd="true"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_person"
+                app:shapeAppearanceOverlay="@style/CircleImage"
+                app:strokeColor="@color/white"
+                app:strokeWidth="2dp"
+                android:contentDescription="Profile" />
+
+            <!-- Greeting block: fills the width left of the avatar (toStartOf + match_parent),
+                 so the 2 lines get real room instead of being squeezed wrap_content-tight
+                 against the avatar. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_alignParentTop="true"
+                android:layout_toStartOf="@id/imgProfile"
+                android:layout_marginEnd="14dp"
+                android:orientation="vertical">
+
+                <!-- Time-of-day greeting, set in DiscoveryFragment#greetingForCurrentTime(). -->
+                <TextView
+                    android:id="@+id/txtWelcome"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    tools:text="Chào buổi sáng,"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#555555" />
+
+                <TextView
+                    android:id="@+id/txtUserName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    tools:text="Guest!"
+                    android:textSize="26sp"
+                    android:textStyle="bold"
+                    android:textColor="#1B5E20" />
+            </LinearLayout>
+        </RelativeLayout>
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/searchLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="20dp"
             app:hintEnabled="false"
-            app:startIconDrawable="@android:drawable/ic_menu_search"
-            app:boxCornerRadiusTopStart="12dp"
-            app:boxCornerRadiusBottomStart="12dp"
-            app:boxCornerRadiusTopEnd="12dp"
-            app:boxCornerRadiusBottomEnd="12dp"
+            app:endIconMode="custom"
+            app:endIconDrawable="@android:drawable/ic_menu_search"
+            app:endIconTint="@color/green_dark_primary"
+            app:boxBackgroundMode="outline"
+            app:boxBackgroundColor="@color/white"
+            app:boxStrokeWidth="0dp"
+            app:boxStrokeWidthFocused="0dp"
+            app:boxCornerRadiusTopStart="26dp"
+            app:boxCornerRadiusBottomStart="26dp"
+            app:boxCornerRadiusTopEnd="26dp"
+            app:boxCornerRadiusBottomEnd="26dp"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
             <EditText
                 android:id="@+id/edtSearch"
                 android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:hint="Search tour, destination..."
+                android:layout_height="52dp"
+                android:hint="Bạn muốn đi đâu?"
                 android:inputType="text"
-                android:padding="10dp"
+                android:paddingStart="18dp"
+                android:paddingEnd="10dp"
                 android:background="@null"
                 android:imeOptions="actionSearch"/>
         </com.google.android.material.textfield.TextInputLayout>
@@ -77,7 +146,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:scrollbars="none"
-            android:layout_marginTop="12dp">
+            android:layout_marginTop="16dp">
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chipGroup"
                 android:layout_width="wrap_content"
@@ -88,38 +157,76 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Tất cả"
+                    android:textColor="@color/chip_filter_text"
+                    app:chipBackgroundColor="@color/chip_filter_bg"
+                    app:chipStrokeColor="@color/chip_filter_stroke"
+                    app:chipStrokeWidth="1dp"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:checked="true"/>
                 <com.google.android.material.chip.Chip
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Quy Nhơn"
+                    android:textColor="@color/chip_filter_text"
+                    app:chipBackgroundColor="@color/chip_filter_bg"
+                    app:chipStrokeColor="@color/chip_filter_stroke"
+                    app:chipStrokeWidth="1dp"
                     style="@style/Widget.MaterialComponents.Chip.Choice"/>
                 <com.google.android.material.chip.Chip
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Tây Ninh"
+                    android:textColor="@color/chip_filter_text"
+                    app:chipBackgroundColor="@color/chip_filter_bg"
+                    app:chipStrokeColor="@color/chip_filter_stroke"
+                    app:chipStrokeWidth="1dp"
                     style="@style/Widget.MaterialComponents.Chip.Choice"/>
                 <com.google.android.material.chip.Chip
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Cần Thơ"
+                    android:textColor="@color/chip_filter_text"
+                    app:chipBackgroundColor="@color/chip_filter_bg"
+                    app:chipStrokeColor="@color/chip_filter_stroke"
+                    app:chipStrokeWidth="1dp"
                     style="@style/Widget.MaterialComponents.Chip.Choice"/>
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
 
-        <TextView
-            android:layout_width="wrap_content"
+        <RelativeLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Popular"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginTop="16dp" />
+            android:layout_marginTop="18dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Popular"
+                android:textColor="#212121"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <!-- Static label only, mirrors the reference design - no "view all" screen exists yet
+                 so it's not wired to a click action. -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:text="Xem thêm"
+                android:textColor="@color/green_dark_primary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </RelativeLayout>
+        <!-- wrap_content: card height is computed in PopularAdapter from the (now
+             screen-width-based, narrower) card width, so a fixed dp here would either clip the
+             2-line landmark/province text or leave dead space below the cards. -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerPopular"
             android:layout_width="match_parent"
-            android:layout_height="150dp"
-            android:layout_marginTop="8dp" />
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:clipToPadding="false" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -131,10 +238,10 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerTours"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_height="wrap_content"
             android:layout_marginTop="8dp" />
     </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
     <!-- Floating chatbot launcher - bottom-right corner of the Discovery content area only.
          Pushes ChatbotActivity (full-screen chat) instead of an in-place overlay.
@@ -144,8 +251,10 @@
         android:id="@+id/btnChatbotFab"
         android:layout_width="56dp"
         android:layout_height="56dp"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="190dp"
         android:scaleType="centerCrop"
         android:src="@drawable/chatbot_avatar_face"
         app:shapeAppearanceOverlay="@style/CircleImage"
@@ -154,7 +263,9 @@
         android:contentDescription="Open trip assistant chat"
         android:elevation="6dp"
         android:clickable="true"
-        android:focusable="true" />
+        android:focusable="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- One-time-per-session hint bubble that draws attention to the chatbot FAB (see
          setupChatbotHint() in DiscoveryFragment). Cloud shape = rounded bubble body
@@ -164,15 +275,16 @@
         android:id="@+id/cloudBubbleContainer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
         android:layout_marginEnd="8dp"
-        android:layout_marginBottom="96dp"
+        android:layout_marginBottom="266dp"
         android:clipChildren="false"
         android:clipToPadding="false"
         android:visibility="gone"
         android:alpha="0"
         android:clickable="true"
-        android:focusable="true">
+        android:focusable="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <TextView
             android:id="@+id/txtCloudBubble"
@@ -213,4 +325,4 @@
             android:layout_marginBottom="-26dp"
             android:background="@drawable/bg_cloud_bump" />
     </FrameLayout>
-</FrameLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

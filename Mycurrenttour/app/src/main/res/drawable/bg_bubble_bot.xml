@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Bot bubble: white fill, corners softened + asymmetric (small radius near the avatar) so it
      reads as a speech bubble rather than a plain rounded rect. Solid fill keeps the default
-     View.OutlineProvider valid, so android:elevation on the TextView still casts a real shadow. -->
+     View.OutlineProvider valid, so android:elevation on the TextView still casts a real shadow.
+     A hairline stroke is included so the bubble stays visibly delineated even where bg_chatbot
+     is nearly white (e.g. right under the header) - elevation shadow alone was too subtle there. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <solid android:color="#FFFFFF" />
+    <stroke
+        android:width="1dp"
+        android:color="#E0E0E0" />
     <corners
         android:topLeftRadius="6dp"
         android:topRightRadius="18dp"

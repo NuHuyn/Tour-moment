@@ -1,24 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Single-Activity shell: fragmentContainer swaps between DiscoveryFragment / MyTourFragment /
-     ReelsFragment / ProfileFragment while bottomNavigation stays fixed on screen (see HomeActivity). -->
+     ReelsFragment / ProfileFragment while bottomNavigation stays fixed on screen (see HomeActivity).
+
+     Bottom nav is a floating, translucent rounded white bar (MaterialCardView), reference: Xanh SM
+     app. fragmentContainer is full-bleed (match_parent, NOT layout_above the nav) and drawn first,
+     navBarContainer drawn after so it z-order-overlaps the bottom of the scrolling content - that
+     overlap is what makes the card's translucency actually show content behind it instead of just
+     this root's flat background. Each fragment keeps its own scroll content clear of the card's
+     footprint via bottom padding (paddingBottom on fragment_my_tour.xml / fragment_discovery.xml's
+     scroll column) instead of the old layout_above approach, which never let the card overlap
+     anything to begin with.
+
+     Root background is white/neutral (not the app's mint green) so nothing colored peeks through
+     in the margin strip around the floating card - a green root background there was the previous
+     "halo" bug. cardElevation draws its own neutral gray/black drop shadow (Android's default
+     elevation shadow is never colored, so no separate tinting needed). bottomNavigation's own
+     height is wrap_content so all 4 labels (labelVisibilityMode="labeled") always have room and
+     never get clipped/compressed - a fixed height was too short for icon+label on every tab at
+     once and caused exactly that clipping. -->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F1F8E9">
+    android:background="@color/white">
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/fragmentContainer"
         android:name="androidx.fragment.app.Fragment"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_above="@id/bottomNavigation" />
+        android:layout_height="match_parent" />
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottomNavigation"
+    <!-- Soft vignette behind the nav card - see bg_bottom_nav_scrim.xml. -->
+    <View
         android:layout_width="match_parent"
-        android:layout_height="65dp"
+        android:layout_height="170dp"
         android:layout_alignParentBottom="true"
-        android:background="#FFFFFF"
-        app:menu="@menu/bottom_menu" />
+        android:background="@drawable/bg_bottom_nav_scrim" />
+
+    <!-- ~90% opacity white: translucent, not a fully solid bar - scrolled content faintly shows
+         through behind it while staying fully readable on top. No true real-time Gaussian blur of
+         the content behind it (that needs either API 31+ RenderEffect plumbing or a third-party
+         blur library like eightbitlab/BlurView - a bigger, separate change); flag if you want that
+         added on top of this. -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/navBarContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="16dp"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="#E6FFFFFF">
+
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottomNavigation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            app:labelVisibilityMode="labeled"
+            app:itemIconTint="@color/bottom_nav_icon_color"
+            app:itemTextColor="@color/bottom_nav_item_color"
+            app:itemActiveIndicatorStyle="@style/ActiveIndicator.MyCurrentTour"
+            app:menu="@menu/bottom_menu" />
+    </com.google.android.material.card.MaterialCardView>
 </RelativeLayout>

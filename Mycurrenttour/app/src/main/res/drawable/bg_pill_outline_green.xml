@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pill "+ Add this Tour" button on the Discovery "All Tours" card: transparent fill, green
+     stroke. TourAdapter calls getBackground().setTint(...) on bind/click to swap the stroke
+     between light green (idle) and dark green (added) - the transparent solid keeps its alpha
+     under that tint, so only the border color changes. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+    <stroke
+        android:width="1.5dp"
+        android:color="#81C784" />
+    <corners android:radius="20dp" />
+</shape>

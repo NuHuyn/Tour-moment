@@ -1,149 +1,146 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Full-screen "Trip Assistant" chat - pushed from the floating chatbot icon on the Discovery tab
-     only (see DiscoveryFragment). Own Activity (no bottom nav), back returns to Discovery. -->
-<LinearLayout
+     only (see DiscoveryFragment). Own Activity (no bottom nav), back returns to Discovery.
+     bg_chatbot sits full-screen behind the whole chat frame (header, messages, input), z-order
+     bottom of the root FrameLayout; everything else is transparent/translucent over it. -->
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#FFFFFF">
+    android:layout_height="match_parent">
 
-    <!-- Header: back arrow + chatbot avatar + title, app's light/cream tone (no dark background). -->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/bg_chatbot"
+        android:contentDescription="@null"
+        android:importantForAccessibility="no" />
+
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="#FFFFFF"
-        android:paddingVertical="12dp"
-        android:paddingHorizontal="8dp"
-        android:elevation="4dp">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-        <ImageView
-            android:id="@+id/btnChatBack"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:padding="8dp"
-            android:src="@drawable/ic_arrow_back"
-            android:contentDescription="Back to Discovery"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true" />
-
-        <com.google.android.material.imageview.ShapeableImageView
-            android:layout_width="34dp"
-            android:layout_height="34dp"
-            android:layout_marginStart="4dp"
-            android:scaleType="centerCrop"
-            android:src="@drawable/chatbot_avatar_face"
-            app:shapeAppearanceOverlay="@style/CircleImage"
-            app:strokeColor="#2E7D32"
-            app:strokeWidth="1.5dp"
-            android:contentDescription="Trip Assistant" />
-
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- Header: back arrow, centered bold title + small subtitle, 3-dot menu. No avatar - see
+             item_chat_bot_message.xml for why avatars were dropped screen-wide. Transparent, no
+             elevation - sits directly on bg_chatbot with no shadow/divider line separating it
+             from the chat canvas below. -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:text="Trip Assistant"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#1B5E20" />
-    </LinearLayout>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@android:color/transparent"
+            android:paddingVertical="10dp"
+            android:paddingHorizontal="4dp">
 
-    <!-- Message canvas: raster illustration sits behind the (transparent) ScrollView so it stays
-         fixed while messages scroll over it, with a translucent white wash on top of it to keep
-         bubble text readable against the darker/busier parts of the artwork (palm shadow, tree
-         cluster at the bottom). -->
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="centerCrop"
-            android:src="@drawable/chat_bg_illustration"
-            android:contentDescription="@null"
-            android:importantForAccessibility="no" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="#73FFFFFF"
-            android:importantForAccessibility="no" />
-
-        <ScrollView
-            android:id="@+id/scrollChatMessages"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:paddingHorizontal="12dp"
-            android:scrollbars="none">
+            <ImageView
+                android:id="@+id/btnChatBack"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_arrow_back"
+                android:contentDescription="Back to Discovery"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true" />
 
             <LinearLayout
-                android:id="@+id/layoutChatMessages"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:orientation="vertical"
-                android:paddingVertical="12dp" />
-        </ScrollView>
-    </FrameLayout>
+                android:gravity="center_horizontal">
 
-    <!-- Quick-reply suggestion chips - only shown for the empty state, before the user sends their
-         first message (see ChatbotActivity#hideQuickReplies). -->
-    <HorizontalScrollView
-        android:id="@+id/scrollQuickReplies"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="#FFFFFF"
-        android:scrollbars="none"
-        android:paddingStart="12dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="4dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Trip Assistant"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/black" />
 
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Trợ lý du lịch của bạn"
+                    android:textSize="11sp"
+                    android:textColor="@color/text_gray" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/btnChatMenu"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_more_vert"
+                android:tint="#1B5E20"
+                android:contentDescription="More options"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true" />
+        </LinearLayout>
+
+        <!-- Message canvas: transparent, so bg_chatbot behind the root FrameLayout shows through
+             as messages scroll over it. -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <ScrollView
+                android:id="@+id/scrollChatMessages"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingHorizontal="12dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/layoutChatMessages"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingVertical="12dp" />
+            </ScrollView>
+        </FrameLayout>
+
+        <!-- Input row, fixed at the bottom of the chat screen. Quick-reply chips used to be a
+             standalone bar here; they're now added inline into layoutChatMessages right under the
+             greeting bubble (see ChatbotActivity#setupQuickReplies), so this row is input-only. -->
         <LinearLayout
-            android:id="@+id/layoutQuickReplies"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal" />
-    </HorizontalScrollView>
-
-    <!-- Input row, fixed at the bottom of the chat screen. -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="#FFFFFF"
-        android:padding="12dp"
-        android:elevation="8dp">
-
-        <EditText
-            android:id="@+id/edtChatInput"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_light_green_round"
-            android:hint="Ask about a trip..."
-            android:paddingHorizontal="14dp"
-            android:textSize="14sp"
-            android:inputType="text"
-            android:imeOptions="actionSend"
-            android:maxLines="1" />
-
-        <ImageView
-            android:id="@+id/btnSendChat"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="8dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#F2FFFFFF"
             android:padding="10dp"
-            android:background="@drawable/bg_circle_green"
-            android:src="@android:drawable/ic_menu_send"
-            android:tint="#FFFFFF"
-            android:contentDescription="Send message"
-            android:clickable="true"
-            android:focusable="true" />
+            android:elevation="8dp">
+
+            <EditText
+                android:id="@+id/edtChatInput"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_light_green_round"
+                android:hint="Nhập tin nhắn..."
+                android:paddingHorizontal="14dp"
+                android:textSize="14sp"
+                android:inputType="text"
+                android:imeOptions="actionSend"
+                android:maxLines="1" />
+
+            <ImageView
+                android:id="@+id/btnSendChat"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="8dp"
+                android:padding="12dp"
+                android:background="@drawable/bg_circle_green"
+                android:src="@drawable/ic_send"
+                android:contentDescription="Send message"
+                android:clickable="true"
+                android:focusable="true" />
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>

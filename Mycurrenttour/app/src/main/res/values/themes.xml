@@ -1,13 +1,37 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.MyCurrentTour" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <!-- App's real palette is the brand green, not Material3's default purple baseline -
+             without this override the status bar and any default-tinted widgets (e.g. the bottom
+             nav's active-item indicator) render purple instead of matching the rest of the UI. -->
+        <item name="colorPrimary">@color/brand_green</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/brand_green</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="android:statusBarColor">@color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
     <style name="Theme.MyCurrentTour" parent="Base.Theme.MyCurrentTour" />
 
     <style name="CircleImage">
         <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="RoundedCorner12dp">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <style name="RoundedCorner16dp">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <!-- Bottom nav's active-tab pill, recolored green (default Material3 token is
+         colorSecondaryContainer, which without this override renders as the baseline theme's
+         purple instead of matching the rest of the app). -->
+    <style name="ActiveIndicator.MyCurrentTour" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/brand_green</item>
     </style>
 </resources>

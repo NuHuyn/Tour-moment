@@ -1,23 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Popular" carousel card (PopularAdapter) - same real tour data/click-through, 12dp rounded
+     corners, 2-line info (landmark name + province). No rating stars: there's no rating field on
+     Tour, so nothing is shown rather than making one up.
+     Width/height are set programmatically in PopularAdapter (screen-width-based, so exactly 3
+     cards fit the viewport) - the wrap_content/match_parent values below are just inflation
+     defaults, overwritten before the item is shown. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:layout_width="160dp"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:layout_marginEnd="10dp">
+    android:layout_marginEnd="12dp">
 
-    <ImageView
+    <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/imgPopular"
         android:layout_width="match_parent"
-        android:layout_height="120dp"
-        android:scaleType="centerCrop"/>
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        app:shapeAppearanceOverlay="@style/RoundedCorner12dp" />
 
+    <!-- Landmark name (e.g. "Bản Cát Cát"), from the tour's first waypoint. -->
     <TextView
         android:id="@+id/txtPopularName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#046603"
+        android:layout_marginTop="8dp"
+        android:textColor="#212121"
         android:textStyle="bold"
         android:textSize="14sp"
-        android:maxLines="2"
+        android:maxLines="1"
+        android:ellipsize="end"/>
+
+    <!-- Province/city (e.g. "Sa Pa") - the part of that same waypoint's locationName after its
+         last " - ", the same free-text convention the chip filter already substring-matches
+         against (Tour/Waypoint has no separate structured province field). Hidden if that
+         waypoint name doesn't follow the "Landmark - Province" convention. -->
+    <TextView
+        android:id="@+id/txtPopularProvince"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="#757575"
+        android:textSize="12sp"
+        android:maxLines="1"
         android:ellipsize="end"/>
 
 </LinearLayout>

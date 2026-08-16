@@ -17,18 +17,17 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Random;
 
@@ -47,11 +46,20 @@ import retrofit2.Response;
 public class DiscoveryFragment extends Fragment {
 
     private ImageView iconProfile;
+    private ImageView imgHeaderBg;
+    private NestedScrollView scrollContent;
+    private TextView txtWelcome, txtUserName;
     private EditText edtSearch;
     private RecyclerView recyclerTours, recyclerPopular;
     private TourAdapter adapter;
     private PopularAdapter popularAdapter;
     private ChipGroup chipGroup;
+
+    // Must match imgDiscoveryHeaderBg's height in fragment_discovery.xml: the header art fades
+    // from fully visible at scrollY=0 to fully gone by this many dp of scroll (linear both ways -
+    // scrolling back up brings it back), instead of either staying pinned under the scrolling
+    // content or scrolling rigidly with it.
+    private static final int HEADER_FADE_DISTANCE_DP = 320;
 
     private List<Tour> originalList = new ArrayList<>();
 
@@ -66,6 +74,10 @@ public class DiscoveryFragment extends Fragment {
     };
     private final Handler cloudHintHandler = new Handler(Looper.getMainLooper());
     private View cloudBubbleContainer;
+
+    // Fed manually (not via BottomNavScrollHelper.attach()) since scrollContent already owns its
+    // one OnScrollChangeListener slot for the header fade - see setupHeaderFade().
+    private BottomNavScrollHelper.Tracker navScrollTracker;
 
     @Nullable
     @Override
@@ -124,23 +136,53 @@ public class DiscoveryFragment extends Fragment {
                 }).start();
     }
 
+    /** Fades imgDiscoveryHeaderBg out/in as scrollContent scrolls, instead of leaving it either
+     *  pinned in place (transparent scrolled-over content lets it bleed through) or scrolling
+     *  rigidly with the content column (needs an opaque backing to hide that same bleed-through,
+     *  which reads as a hard edge). Linear both directions - NestedScrollView.OnScrollChangeListener
+     *  fires on every scroll delta, up or down, so scrolling back up smoothly brings it back. */
+    private void setupHeaderFade() {
+        if (getContext() == null) return;
+        float fadeDistancePx = HEADER_FADE_DISTANCE_DP * getResources().getDisplayMetrics().density;
+        navScrollTracker = new BottomNavScrollHelper.Tracker((HomeActivity) requireActivity());
+
+        scrollContent.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+            float alpha = 1f - (scrollY / fadeDistancePx);
+            imgHeaderBg.setAlpha(Math.max(0f, Math.min(1f, alpha)));
+
+            if (scrollY <= 0) ((HomeActivity) requireActivity()).showBottomNav();
+            navScrollTracker.onScrolled(scrollY - oldScrollY);
+        });
+    }
+
     private void initViews(View root) {
         iconProfile = root.findViewById(R.id.imgProfile);
+        imgHeaderBg = root.findViewById(R.id.imgDiscoveryHeaderBg);
+        scrollContent = root.findViewById(R.id.scrollDiscoveryContent);
+        txtWelcome = root.findViewById(R.id.txtWelcome);
+        txtUserName = root.findViewById(R.id.txtUserName);
         edtSearch = root.findViewById(R.id.edtSearch);
         chipGroup = root.findViewById(R.id.chipGroup);
         recyclerPopular = root.findViewById(R.id.recyclerPopular);
         recyclerTours = root.findViewById(R.id.recyclerTours);
 
+        setupHeaderFade();
+
         recyclerPopular.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        recyclerTours.setLayoutManager(new GridLayoutManager(getContext(), 2));
+        // Full-width vertical list (was a 2-column grid, which squished item_tour_discovery.xml's
+        // image-left/info-right row into half-width and made its text overlap/wrap).
+        recyclerTours.setLayoutManager(new LinearLayoutManager(getContext()));
+        // The whole screen scrolls as one NestedScrollView (see fragment_discovery.xml) -
+        // without this, recyclerTours would grab vertical touch/fling events for itself as soon
+        // as a swipe starts over "All Tours", instead of letting them bubble up to that outer
+        // scroll container.
+        recyclerTours.setNestedScrollingEnabled(false);
 
         adapter = new TourAdapter(new ArrayList<>(), true);
         recyclerTours.setAdapter(adapter);
 
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user != null && user.getPhotoUrl() != null) {
-            Picasso.get().load(user.getPhotoUrl()).into(iconProfile);
-        }
+        displayGreeting();
+        displayAvatar();
         iconProfile.setOnClickListener(v -> showLogoutDialog());
 
         edtSearch.addTextChangedListener(new TextWatcher() {
@@ -164,6 +206,48 @@ public class DiscoveryFragment extends Fragment {
                 else filterTours(category);
             }
         });
+    }
+
+    /** Time-of-day greeting ("Chào buổi sáng," 5h-11h / "Chào buổi trưa," 11h-13h / "Chào buổi
+     *  chiều," 13h-18h / "Chào buổi tối," 18h-5h) + bold display name, taken from the same
+     *  SessionManager the Profile tab uses (Guest vs local Google Sign-In result). */
+    private void displayGreeting() {
+        if (getContext() == null) return;
+
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        String greeting;
+        if (hour >= 5 && hour < 11) greeting = "Chào buổi sáng,";
+        else if (hour >= 11 && hour < 13) greeting = "Chào buổi trưa,";
+        else if (hour >= 13 && hour < 18) greeting = "Chào buổi chiều,";
+        else greeting = "Chào buổi tối,";
+        txtWelcome.setText(greeting);
+
+        SessionManager.SignInType signInType = SessionManager.getSignInType(getContext());
+        String name = signInType == SessionManager.SignInType.GOOGLE
+                ? SessionManager.getDisplayName(getContext())
+                : null;
+        txtUserName.setText((name != null ? name : (signInType == SessionManager.SignInType.GOOGLE ? "Traveler" : "Guest")) + "!");
+    }
+
+    /** Avatar: Guest -> avt_guest, Google -> the real photo from the (local-only) Google
+     *  Sign-In result saved at login - exact same SessionManager mechanism as ProfileFragment,
+     *  not reimplemented here. */
+    private void displayAvatar() {
+        if (getContext() == null) return;
+
+        if (SessionManager.getSignInType(getContext()) == SessionManager.SignInType.GOOGLE) {
+            Glide.with(this)
+                    .load(SessionManager.getPhotoUrl(getContext()))
+                    .placeholder(R.drawable.ic_user_placeholder)
+                    .error(R.drawable.ic_user_placeholder)
+                    .circleCrop()
+                    .into(iconProfile);
+        } else {
+            Glide.with(this)
+                    .load(R.drawable.avt_guest)
+                    .circleCrop()
+                    .into(iconProfile);
+        }
     }
 
     private void filterTours(String query) {
@@ -234,7 +318,7 @@ public class DiscoveryFragment extends Fragment {
                 .setTitle("Log out")
                 .setMessage("Are you sure you want to log out?")
                 .setPositiveButton("Yes", (d, w) -> {
-                    FirebaseAuth.getInstance().signOut();
+                    SessionManager.clear(getContext());
                     startActivity(new Intent(getContext(), LoginActivity.class));
                     requireActivity().finish();
                 })
