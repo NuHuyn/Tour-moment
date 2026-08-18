@@ -1,6 +1,23 @@
 const Tour = require("../models/Tour");
 const User = require("../models/User");
 
+// Helper to normalize coordinates from [latitude, longitude] to standard GeoJSON [longitude, latitude]
+const normalizeWaypoints = (waypoints) => {
+  if (!waypoints || !Array.isArray(waypoints)) return waypoints;
+  return waypoints.map(wp => {
+    if (wp.coordinate && wp.coordinate.coordinates) {
+      const [first, second] = wp.coordinate.coordinates;
+      // In Vietnam: latitude is ~8 to ~23 (always <= 90), longitude is ~102 to ~109 (always > 90)
+      // If coordinates[0] (latitude) <= 90 and coordinates[1] (longitude) > 90,
+      // it means they are flipped, so swap them to standard GeoJSON: [longitude, latitude]
+      if (Math.abs(first) <= 90 && Math.abs(second) > 90) {
+        wp.coordinate.coordinates = [second, first];
+      }
+    }
+    return wp;
+  });
+};
+
 // @desc    Upload ảnh tour
 // @route   POST /api/tours/upload
 // @access  Public
@@ -25,6 +42,9 @@ const uploadImage = (req, res, next) => {
 // @access  Public
 const createTour = async (req, res, next) => {
   try {
+    if (req.body.waypoints) {
+      req.body.waypoints = normalizeWaypoints(req.body.waypoints);
+    }
     const newTour = new Tour({ ...req.body, isShared: false });
     const savedTour = await newTour.save();
     res.status(201).json(savedTour);
@@ -72,6 +92,9 @@ const getMyTours = async (req, res, next) => {
 // @access  Public
 const updateTour = async (req, res, next) => {
   try {
+    if (req.body.waypoints) {
+      req.body.waypoints = normalizeWaypoints(req.body.waypoints);
+    }
     const updatedTour = await Tour.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!updatedTour) {
       return res.status(404).json({ message: "Không tìm thấy tour" });
@@ -156,6 +179,38 @@ const getPublicTours = async (req, res, next) => {
   }
 };
 
+// @desc    Thêm waypoint vào tour
+// @route   PATCH /api/tours/:id/waypoint
+// @access  Public
+const addWaypoint = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    let waypoint = req.body;
+
+    // Normalize coordinates if single waypoint
+    if (waypoint.coordinate && waypoint.coordinate.coordinates) {
+      const [first, second] = waypoint.coordinate.coordinates;
+      if (Math.abs(first) <= 90 && Math.abs(second) > 90) {
+        waypoint.coordinate.coordinates = [second, first];
+      }
+    }
+
+    const updatedTour = await Tour.findByIdAndUpdate(
+      id,
+      { $push: { waypoints: waypoint } },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedTour) {
+      return res.status(404).json({ message: "Không tìm thấy tour" });
+    }
+
+    res.status(200).json(updatedTour);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   uploadImage,
   createTour,
@@ -163,5 +218,6 @@ module.exports = {
   updateTour,
   shareTour,
   copyTour,
-  getPublicTours
+  getPublicTours,
+  addWaypoint
 };
