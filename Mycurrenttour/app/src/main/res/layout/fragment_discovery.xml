@@ -75,7 +75,7 @@
                 app:shapeAppearanceOverlay="@style/CircleImage"
                 app:strokeColor="@color/white"
                 app:strokeWidth="2dp"
-                android:contentDescription="Profile" />
+                android:contentDescription="@string/cd_profile" />
 
             <!-- Greeting block: fills the width left of the avatar (toStartOf + match_parent),
                  so the 2 lines get real room instead of being squeezed wrap_content-tight
@@ -134,7 +134,7 @@
                 android:id="@+id/edtSearch"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:hint="Bạn muốn đi đâu?"
+                android:hint="@string/search_hint"
                 android:inputType="text"
                 android:paddingStart="18dp"
                 android:paddingEnd="10dp"
@@ -156,7 +156,7 @@
                     android:id="@+id/chipAll"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Tất cả"
+                    android:text="@string/chip_all"
                     android:textColor="@color/chip_filter_text"
                     app:chipBackgroundColor="@color/chip_filter_bg"
                     app:chipStrokeColor="@color/chip_filter_stroke"
@@ -201,7 +201,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Popular"
+                android:text="@string/popular_label"
                 android:textColor="#212121"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -213,7 +213,7 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:text="Xem thêm"
+                android:text="@string/view_more"
                 android:textColor="@color/green_dark_primary"
                 android:textSize="13sp"
                 android:textStyle="bold" />
@@ -231,7 +231,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="All Tours"
+            android:text="@string/all_tours_label"
             android:textSize="18sp"
             android:textStyle="bold"
             android:layout_marginTop="16dp" />
@@ -260,7 +260,7 @@
         app:shapeAppearanceOverlay="@style/CircleImage"
         app:strokeColor="#2E7D32"
         app:strokeWidth="2dp"
-        android:contentDescription="Open trip assistant chat"
+        android:contentDescription="@string/cd_open_chat"
         android:elevation="6dp"
         android:clickable="true"
         android:focusable="true"

@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Bottom nav icon tint: white on the active tab (it sits on top of the solid green indicator
-     pill - see ActiveIndicator.MyCurrentTour in themes.xml), gray otherwise. Label text uses a
-     separate selector (bottom_nav_item_color.xml) since it stays green-on-checked, not white. -->
+<!-- Bottom nav icon tint: brand green on the active tab, gray otherwise. No pill/background sits
+     behind the icon anymore (see itemActiveIndicatorStyle in activity_home.xml / themes.xml), so
+     unlike before this no longer needs to stay white-on-green - it matches the label's own color
+     selector (bottom_nav_item_color.xml). HomeActivity additionally cross-fades between these two
+     colors on tab switch instead of an instant flip - see animateNavItemState(). -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:color="@color/white" android:state_checked="true" />
-    <item android:color="#9E9E9E" />
+    <item android:color="@color/brand_green" android:state_checked="true" />
+    <item android:color="@color/bottom_nav_inactive_gray" />
 </selector>

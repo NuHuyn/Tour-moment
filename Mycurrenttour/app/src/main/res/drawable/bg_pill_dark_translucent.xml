@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Semi-transparent dark pill behind the "1/2" photo counter on Tour Detail's hero carousel. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/overlay_dark" />
+    <corners android:radius="12dp" />
+</shape>

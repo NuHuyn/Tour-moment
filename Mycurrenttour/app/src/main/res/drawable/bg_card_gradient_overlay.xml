@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom-of-photo scrim for the full-bleed "My Travel" trip card (item_tour.xml). Transparent
+     at the top edge fading to a dark, slightly-green black at the bottom so the white title/meta/
+     price text stays legible over any photo. android:angle="270" = top-to-bottom in shape
+     gradients (0 is left-to-right, increasing rotates counter-clockwise). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:type="linear"
+        android:angle="270"
+        android:startColor="@android:color/transparent"
+        android:centerColor="#330D2818"
+        android:endColor="#E00D2818" />
+</shape>

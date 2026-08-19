@@ -2,17 +2,27 @@
 <!-- Single-Activity shell: fragmentContainer swaps between DiscoveryFragment / MyTourFragment /
      ReelsFragment / ProfileFragment while bottomNavigation stays fixed on screen (see HomeActivity).
 
-     Bottom nav is a floating, translucent rounded white bar (MaterialCardView), reference: Xanh SM
-     app. fragmentContainer is full-bleed (match_parent, NOT layout_above the nav) and drawn first,
-     navBarContainer drawn after so it z-order-overlaps the bottom of the scrolling content - that
-     overlap is what makes the card's translucency actually show content behind it instead of just
-     this root's flat background. Each fragment keeps its own scroll content clear of the card's
-     footprint via bottom padding (paddingBottom on fragment_my_tour.xml / fragment_discovery.xml's
-     scroll column) instead of the old layout_above approach, which never let the card overlap
-     anything to begin with.
+     Bottom nav is a floating capsule (MaterialCardView, oversized cardCornerRadius so it's clamped
+     to a true pill regardless of the bar's exact height - not just top corners), reference: iOS
+     travel-app style floating nav. fragmentContainer is full-bleed (match_parent, NOT layout_above
+     the nav) and drawn first, navBarContainer drawn after so it z-order-overlaps the bottom of the
+     scrolling content - that overlap is what lets the capsule's blur actually pick up content
+     behind it instead of just this root's flat background. Each fragment keeps its own scroll
+     content clear of the capsule's footprint via bottom padding (paddingBottom on
+     fragment_my_tour.xml / fragment_discovery.xml's scroll column) instead of the old
+     layout_above approach, which never let the card overlap anything to begin with.
+
+     blurTarget (BlurView library) wraps everything that should be visible, blurred, through the
+     capsule - fragmentContainer + the vignette scrim. navBlurView is the capsule's actual
+     background: it renders a real-time Gaussian-ish blur of blurTarget's content (see
+     HomeActivity.setupBlur()) with a translucent white overlay on top (app:blurOverlayColor), so
+     scrolled content stays faintly visible/frosted through the bar instead of fully opaque or a
+     flat scrim-only fake. navBarContainer (MaterialCardView) still only provides the pill-shaped
+     clip + drop shadow around that blur; its own cardBackgroundColor is transparent since
+     navBlurView supplies the visible surface now.
 
      Root background is white/neutral (not the app's mint green) so nothing colored peeks through
-     in the margin strip around the floating card - a green root background there was the previous
+     in the margin strip around the floating capsule - a green root background there was a previous
      "halo" bug. cardElevation draws its own neutral gray/black drop shadow (Android's default
      elevation shadow is never colored, so no separate tinting needed). bottomNavigation's own
      height is wrap_content so all 4 labels (labelVisibilityMode="labeled") always have room and
@@ -24,24 +34,33 @@
     android:layout_height="match_parent"
     android:background="@color/white">
 
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/fragmentContainer"
-        android:name="androidx.fragment.app.Fragment"
+    <eightbitlab.com.blurview.BlurTarget
+        android:id="@+id/blurTarget"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
 
-    <!-- Soft vignette behind the nav card - see bg_bottom_nav_scrim.xml. -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="170dp"
-        android:layout_alignParentBottom="true"
-        android:background="@drawable/bg_bottom_nav_scrim" />
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/fragmentContainer"
+            android:name="androidx.fragment.app.Fragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-    <!-- ~90% opacity white: translucent, not a fully solid bar - scrolled content faintly shows
-         through behind it while staying fully readable on top. No true real-time Gaussian blur of
-         the content behind it (that needs either API 31+ RenderEffect plumbing or a third-party
-         blur library like eightbitlab/BlurView - a bigger, separate change); flag if you want that
-         added on top of this. -->
+        <!-- Soft vignette behind the nav capsule - see bg_bottom_nav_scrim.xml. Sits inside
+             blurTarget (not the blur itself) purely so it's part of what gets blurred/read through
+             the capsule, same as the fragment content. -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="170dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/bg_bottom_nav_scrim" />
+
+    </eightbitlab.com.blurview.BlurTarget>
+
+    <!-- Floating capsule: NOT full-width-flush (16dp horizontal/bottom margin so it "islands"
+         above the screen edge) and fully rounded on all 4 corners (cardCornerRadius far exceeds
+         the bar's own height, which Material's shape system clamps to a true stadium/pill instead
+         of a rounded rectangle). cardBackgroundColor is transparent - navBlurView underneath is
+         what's actually visible. -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/navBarContainer"
         android:layout_width="match_parent"
@@ -49,19 +68,30 @@
         android:layout_alignParentBottom="true"
         android:layout_marginHorizontal="16dp"
         android:layout_marginBottom="16dp"
-        app:cardCornerRadius="28dp"
+        app:cardCornerRadius="100dp"
         app:cardElevation="8dp"
-        app:cardBackgroundColor="#E6FFFFFF">
+        app:cardBackgroundColor="@android:color/transparent">
 
-        <com.google.android.material.bottomnavigation.BottomNavigationView
-            android:id="@+id/bottomNavigation"
+        <!-- Frosted glass: real-time blur of blurTarget's content + a translucent white overlay
+             (app:blurOverlayColor -> @color/nav_blur_overlay). Children of BlurView (the nav
+             itself) are drawn sharp on top, not blurred. -->
+        <eightbitlab.com.blurview.BlurView
+            android:id="@+id/navBlurView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
-            app:labelVisibilityMode="labeled"
-            app:itemIconTint="@color/bottom_nav_icon_color"
-            app:itemTextColor="@color/bottom_nav_item_color"
-            app:itemActiveIndicatorStyle="@style/ActiveIndicator.MyCurrentTour"
-            app:menu="@menu/bottom_menu" />
+            app:blurOverlayColor="@color/nav_blur_overlay">
+
+            <com.google.android.material.bottomnavigation.BottomNavigationView
+                android:id="@+id/bottomNavigation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                app:labelVisibilityMode="labeled"
+                app:itemIconTint="@color/bottom_nav_icon_color"
+                app:itemTextColor="@color/bottom_nav_item_color"
+                app:itemActiveIndicatorStyle="@style/ActiveIndicator.MyCurrentTour"
+                app:menu="@menu/bottom_menu" />
+
+        </eightbitlab.com.blurview.BlurView>
     </com.google.android.material.card.MaterialCardView>
 </RelativeLayout>

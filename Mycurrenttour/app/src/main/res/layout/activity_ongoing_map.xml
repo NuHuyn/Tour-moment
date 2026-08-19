@@ -1,127 +1,234 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Route Details: full-bleed map with a floating header/zoom controls and a draggable bottom
+     sheet of stop cards, replacing the old 50/50 map-card + accordion waypoint list. -->
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#FFFFFF">
+    android:background="@color/white">
 
-    <!-- TOP: Map Section (50%) -->
-    <androidx.cardview.widget.CardView
+    <!-- Edge-to-edge map - no card wrapper, no side margins. -->
+    <org.osmdroid.views.MapView
+        android:id="@+id/mapOngoing"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_margin="12dp"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="6dp">
+        android:layout_height="match_parent" />
 
-        <org.osmdroid.views.MapView
-            android:id="@+id/mapOngoing"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-    </androidx.cardview.widget.CardView>
-
-    <!-- BOTTOM: Info Section (50%) -->
-    <LinearLayout
+    <!-- Floating header: back (start) / title (centered on the full width) / recenter (end). -->
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:padding="20dp"
-        android:clipChildren="false"
-        android:clipToPadding="false">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:paddingHorizontal="16dp"
+        android:layout_gravity="top">
+
+        <ImageView
+            android:id="@+id/btnBackFromMap"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_circle_white"
+            android:elevation="4dp"
+            android:padding="11dp"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="@string/back"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
-            android:id="@+id/txtOngoingTitle"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Tour Title"
-            android:textSize="22sp"
+            android:gravity="center"
+            android:text="Route Details"
+            android:textColor="#212121"
+            android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="#2E7D32"/>
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/btnBackFromMap"
+            app:layout_constraintBottom_toBottomOf="@id/btnBackFromMap" />
+
+        <ImageView
+            android:id="@+id/btnRecenter"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_circle_white"
+            android:elevation="4dp"
+            android:padding="11dp"
+            android:src="@drawable/ic_recenter"
+            android:contentDescription="@string/recenter"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Floating zoom +/- group, right side of the map. -->
+    <LinearLayout
+        android:layout_width="44dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|center_vertical"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="120dp"
+        android:orientation="vertical"
+        android:background="@drawable/bg_pill_white_zoom"
+        android:elevation="4dp">
+
+        <TextView
+            android:id="@+id/btnZoomIn"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:gravity="center"
+            android:text="+"
+            android:textColor="#212121"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
         <View
-            android:layout_width="60dp"
-            android:layout_height="4dp"
-            android:layout_marginTop="8dp"
-            android:background="#4CAF50"/>
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE" />
 
         <TextView
+            android:id="@+id/btnZoomOut"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:gravity="center"
+            android:text="−"
+            android:textColor="#212121"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Draggable bottom sheet: drag handle, stop card row, page dots, progress banner, actions. -->
+    <LinearLayout
+        android:id="@+id/sheetRoute"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_sheet_top_rounded"
+        android:elevation="12dp"
+        android:paddingBottom="20dp"
+        app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_drag_handle" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerRouteStops"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:clipToPadding="false"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp" />
+
+        <!-- Page dots - populated in code, one per stop. -->
+        <LinearLayout
+            android:id="@+id/layoutStopDots"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Route details:"
-            android:layout_marginTop="20dp"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="#757575"/>
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal" />
 
-        <!-- Waypoint List -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerOngoingWaypoints"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:layout_marginTop="8dp" />
-
-        <!-- Navigation Buttons -->
-        <LinearLayout
+        <!-- "Bạn đang ở điểm X/Y" progress banner. -->
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginHorizontal="16dp">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="76dp"
+                android:scaleType="fitXY"
+                android:src="@drawable/bg_round_detail"
+                android:contentDescription="@null" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical|start"
+                android:layout_marginStart="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:src="@drawable/ic_pin"
+                    android:contentDescription="@null" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/txtRouteProgressLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Bạn đang ở điểm 1/1"
+                        android:textColor="@color/green_dark_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Hoàn thành để mở toàn bộ hành trình"
+                        android:textColor="#757575"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Navigation buttons - "Back" removed (the floating back arrow over the map already
+             covers navigation back), so this row is Unlock Now alone, full width. -->
+        <FrameLayout
+            android:id="@+id/frameUnlockFull"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="18dp"
+            android:layout_marginHorizontal="16dp"
             android:clipChildren="false"
             android:clipToPadding="false">
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnBackFromMap"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="56dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                android:text="BACK"
-                android:textColor="#5B4F96"
-                app:strokeColor="#D1D1D1"
-                app:cornerRadius="12dp"/>
+                android:id="@+id/btnUnlockFull"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="Unlock Now"
+                android:backgroundTint="@color/green_dark_primary"
+                android:textColor="@color/white"
+                app:cornerRadius="28dp" />
 
-            <!-- Demo waypoint-lock: mở hết toàn bộ waypoint còn khóa (full trip), giảm 25% so với mua lẻ -->
-            <!-- FrameLayout để badge giảm giá đè lên góc trên-phải nút Unlock; ẩn/hiện cùng lúc với nút khi hết hàng chờ khóa -->
-            <FrameLayout
-                android:id="@+id/frameUnlockFull"
-                android:layout_width="0dp"
-                android:layout_height="56dp"
-                android:layout_weight="2"
-                android:clipChildren="false"
-                android:clipToPadding="false">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnUnlockFull"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:text="Unlock"
-                    android:backgroundTint="#2E7D32"
-                    android:textColor="#FFFFFF"
-                    app:cornerRadius="12dp"/>
-
-                <!-- Badge "-25%" tự vẽ bằng code (background bo tròn set trong OngoingMapActivity), không dùng ảnh/icon ngoài -->
-                <TextView
-                    android:id="@+id/badgeUnlockDiscount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="top|end"
-                    android:layout_marginTop="-8dp"
-                    android:layout_marginEnd="-6dp"
-                    android:paddingLeft="7dp"
-                    android:paddingRight="7dp"
-                    android:paddingTop="3dp"
-                    android:paddingBottom="3dp"
-                    android:text="-25%"
-                    android:textColor="#FFFFFF"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:elevation="6dp"/>
-            </FrameLayout>
-        </LinearLayout>
+            <!-- Kept fully inside frameUnlockFull's own bounds (small positive margins, not a
+                 negative offset poking past the edge) so it can never get clipped by an ancestor
+                 that doesn't happen to have clipChildren/clipToPadding disabled on every device -
+                 that "overflow past the corner" look depended on clipping being turned off all
+                 the way up the view tree, which is fragile across screen widths/densities. -->
+            <TextView
+                android:id="@+id/badgeUnlockDiscount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="6dp"
+                android:layout_marginEnd="6dp"
+                android:paddingLeft="7dp"
+                android:paddingRight="7dp"
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp"
+                android:text="-25%"
+                android:textColor="@color/white"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:elevation="6dp" />
+        </FrameLayout>
     </LinearLayout>
 
-</LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

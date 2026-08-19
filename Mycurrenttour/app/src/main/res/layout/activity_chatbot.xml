@@ -41,7 +41,7 @@
                 android:layout_height="40dp"
                 android:padding="8dp"
                 android:src="@drawable/ic_arrow_back"
-                android:contentDescription="Back to Discovery"
+                android:contentDescription="@string/cd_back_to_discovery"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true" />
@@ -53,10 +53,14 @@
                 android:orientation="vertical"
                 android:gravity="center_horizontal">
 
+                <!-- Single localized title (was a hardcoded English title + Vietnamese subtitle
+                     shown together, i.e. two languages at once - see task requirement to remove
+                     that). The subtitle line stays in the tree (no XML structure change) but is
+                     collapsed via visibility="gone" instead of being deleted. -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Trip Assistant"
+                    android:text="@string/trip_assistant_title"
                     android:textSize="17sp"
                     android:textStyle="bold"
                     android:textColor="@color/black" />
@@ -64,7 +68,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Trợ lý du lịch của bạn"
+                    android:visibility="gone"
                     android:textSize="11sp"
                     android:textColor="@color/text_gray" />
             </LinearLayout>
@@ -76,7 +80,7 @@
                 android:padding="8dp"
                 android:src="@drawable/ic_more_vert"
                 android:tint="#1B5E20"
-                android:contentDescription="More options"
+                android:contentDescription="@string/cd_more_options"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true" />
@@ -93,7 +97,7 @@
                 android:id="@+id/scrollChatMessages"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:paddingHorizontal="12dp"
+                android:paddingHorizontal="16dp"
                 android:scrollbars="none">
 
                 <LinearLayout
@@ -123,7 +127,7 @@
                 android:layout_height="48dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_light_green_round"
-                android:hint="Nhập tin nhắn..."
+                android:hint="@string/chat_input_hint"
                 android:paddingHorizontal="14dp"
                 android:textSize="14sp"
                 android:inputType="text"
@@ -138,7 +142,7 @@
                 android:padding="12dp"
                 android:background="@drawable/bg_circle_green"
                 android:src="@drawable/ic_send"
-                android:contentDescription="Send message"
+                android:contentDescription="@string/cd_send_message"
                 android:clickable="true"
                 android:focusable="true" />
         </LinearLayout>

@@ -114,7 +114,7 @@ public class MyTourFragment extends Fragment implements TourAdapter.OnTourAction
                     adapter.updateList(allToursFromApi);
 
                     if (allToursFromApi.isEmpty()) {
-                        Toast.makeText(getContext(), "No " + currentFilter + " tours found.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), getString(R.string.no_tours_found_format, localizedStatusLabel(currentFilter)), Toast.LENGTH_SHORT).show();
                     }
                 } else {
                     Log.e("API_ERROR", "Response failed: " + response.code());
@@ -124,7 +124,7 @@ public class MyTourFragment extends Fragment implements TourAdapter.OnTourAction
             public void onFailure(Call<List<Tour>> call, Throwable t) {
                 if (!isAdded()) return;
                 Log.e("API_ERROR", "Failure: " + t.getMessage());
-                Toast.makeText(getContext(), "Network error", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), R.string.network_error, Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -148,7 +148,18 @@ public class MyTourFragment extends Fragment implements TourAdapter.OnTourAction
         }
         adapter.updateList(filteredList);
         if (filteredList.isEmpty()) {
-            Toast.makeText(getContext(), "No " + status + " tours found.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.no_tours_found_format, localizedStatusLabel(status)), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    /** Maps the internal, API-facing status key ("Upcoming"/"Ongoing"/"Completed" - unchanged,
+     *  since the backend/status comparisons above depend on these exact English values) to a
+     *  localized word for display in Toast messages only. */
+    private String localizedStatusLabel(String status) {
+        if (getContext() == null) return status;
+        if (status.equalsIgnoreCase("Upcoming")) return getString(R.string.status_upcoming);
+        if (status.equalsIgnoreCase("Ongoing")) return getString(R.string.status_ongoing);
+        if (status.equalsIgnoreCase("Completed")) return getString(R.string.status_completed);
+        return status;
     }
 }

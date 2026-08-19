@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Light gray/green filled dot - non-current pagination indicator under Route Details' stop
+     card row (paired with bg_dot_active.xml). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="#C8D8CA" />
+</shape>

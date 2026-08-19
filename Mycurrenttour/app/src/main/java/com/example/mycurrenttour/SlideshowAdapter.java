@@ -30,11 +30,16 @@ public class SlideshowAdapter extends RecyclerView.Adapter<SlideshowAdapter.View
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        // Bug fix: no placeholder/error fallback meant a null or unreachable URL (e.g. Tour
+        // Detail's hero carousel falling back to a single null "photo" when a tour has no images)
+        // rendered as a solid black slide instead of any image at all.
         Glide.with(holder.itemView.getContext())
                 .load(imageUrls.get(position))
                 .apply(new RequestOptions()
                         .centerCrop()
                         .dontAnimate()
+                        .placeholder(R.drawable.centralvietnam)
+                        .error(R.drawable.centralvietnam)
                         .diskCacheStrategy(DiskCacheStrategy.ALL))
                 .into(holder.imageView);
     }

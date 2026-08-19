@@ -68,6 +68,9 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
 
+    // --- Frosted-glass blur behind the floating bottom nav capsule (see activity_home.xml) ---
+    implementation("com.github.Dimezis:BlurView:version-3.2.0")
+
     // --- Testing ---
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

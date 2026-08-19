@@ -2,7 +2,6 @@ package com.example.mycurrenttour;
 
 import android.content.Intent;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -55,14 +54,13 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView imgTour, imgAuthor;
-        TextView txtTitle, txtPrice, txtStartDate, txtAuthorName, txtMeta;
+        TextView txtTitle, txtStartDate, txtAuthorName, txtMeta;
         TextView btnShareToPublic, btnMemorableVideo, btnAddTour, btnStartJourney;
 
         public ViewHolder(View itemView) {
             super(itemView);
             imgTour = itemView.findViewById(R.id.imgTourLogItem);
             txtTitle = itemView.findViewById(R.id.txtLogTourNameItem);
-            txtPrice = itemView.findViewById(R.id.txtLogExpenseItem);
             txtStartDate = itemView.findViewById(R.id.txtLogDateItem);
             txtMeta = itemView.findViewById(R.id.txtTourMetaItem);
 
@@ -99,8 +97,6 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
         Picasso.get().load(tour.getImageUrl()).placeholder(R.drawable.centralvietnam).into(holder.imgTour);
 
         // Reset UI States
-        holder.txtPrice.setTypeface(null, Typeface.NORMAL);
-        holder.txtPrice.setTextColor(Color.parseColor("#757575"));
         holder.txtStartDate.setVisibility(View.GONE);
         holder.btnStartJourney.setVisibility(View.GONE);
         holder.btnAddTour.setVisibility(View.GONE);
@@ -123,10 +119,6 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
 
         // 2. Logic
         if (isHomePage) {
-            holder.txtPrice.setText(formatPriceVnd(tour.getTotalPrice()));
-            holder.txtPrice.setTextColor(Color.parseColor("#212121"));
-            holder.txtPrice.setTypeface(null, Typeface.BOLD);
-
             holder.txtAuthorName.setVisibility(View.VISIBLE);
             holder.imgAuthor.setVisibility(View.VISIBLE);
             String authorName = (tour.getAuthor() != null) ? tour.getAuthor().getDisplayName() : "Traveler";
@@ -148,11 +140,10 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
             });
 
         } else {
+            // My Tour cards are full-bleed photo cards (item_tour.xml) with a bottom gradient
+            // scrim, so all overlaid text needs to stay white/light instead of the dark
+            // gray/#212121 used back when this info sat on a plain white card.
             if (status.equalsIgnoreCase("Upcoming")) {
-                holder.txtPrice.setText(formatPriceVnd(tour.getTotalPrice()));
-                holder.txtPrice.setTextColor(Color.parseColor("#212121"));
-                holder.txtPrice.setTypeface(null, Typeface.BOLD);
-
                 holder.btnStartJourney.setVisibility(View.VISIBLE);
                 holder.btnStartJourney.setText("Start the journey");
                 holder.btnStartJourney.setOnClickListener(v -> startJourney(tour, v));
@@ -161,9 +152,6 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
                 holder.txtStartDate.setVisibility(View.VISIBLE);
                 String dr = "Date: " + formatDate(tour.getStartDate()) + " - " + formatDate(tour.getEndDate());
                 holder.txtStartDate.setText(dr);
-                holder.txtPrice.setText(formatPriceVnd(tour.getTotalPrice()));
-                holder.txtPrice.setTextColor(Color.parseColor("#212121"));
-                holder.txtPrice.setTypeface(null, Typeface.BOLD);
 
                 holder.btnShareToPublic.setVisibility(View.VISIBLE);
                 holder.btnMemorableVideo.setVisibility(View.VISIBLE);
@@ -175,7 +163,6 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
             } else {
                 holder.txtStartDate.setVisibility(View.VISIBLE);
                 holder.txtStartDate.setText("Start date: " + formatDate(tour.getStartDate()));
-                holder.txtPrice.setText("Cost: " + formatPriceVnd(tour.getTotalPrice()));
             }
         }
 
@@ -285,21 +272,6 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
         if (duration != null && destination != null) return duration + " - " + destination;
         if (destination != null) return destination;
         return duration;
-    }
-
-    /** "2999000" -> "2.999.000đ" - VND display format (dot-grouped, no decimals), matching the
-     *  target design. Grouped manually instead of via NumberFormat/vi-VN Locale so it doesn't
-     *  depend on the device's ICU data for a locale the app doesn't otherwise use. */
-    private String formatPriceVnd(int amount) {
-        String digits = String.valueOf(Math.abs(amount));
-        StringBuilder sb = new StringBuilder();
-        int count = 0;
-        for (int i = digits.length() - 1; i >= 0; i--) {
-            sb.append(digits.charAt(i));
-            count++;
-            if (count % 3 == 0 && i != 0) sb.append('.');
-        }
-        return (amount < 0 ? "-" : "") + sb.reverse() + "đ";
     }
 
     private String formatDate(String dateStr) {

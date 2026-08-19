@@ -17,4 +17,13 @@
 
     <!-- Reels empty state (matches the app's existing primary green used elsewhere, e.g. TourDetailActivity) -->
     <color name="green_dark_primary">#2E7D32</color>
+
+    <!-- Floating bottom nav capsule -->
+    <!-- Inactive icon/label tint - shared by bottom_nav_icon_color.xml, bottom_nav_item_color.xml
+         and HomeActivity's per-tab switch animation, instead of each hardcoding #9E9E9E. -->
+    <color name="bottom_nav_inactive_gray">#9E9E9E</color>
+    <!-- Overlay tint drawn on top of the real-time blur (BlurView) inside navBarContainer - lets
+         scrolled content read as a faint, frosted shape through the capsule instead of a flat
+         opaque bar. -->
+    <color name="nav_blur_overlay">#99FFFFFF</color>
 </resources>

@@ -62,7 +62,7 @@ public class ReelsFragment extends Fragment {
 
         view.findViewById(R.id.btnExploreTours).setOnClickListener(v -> goToDiscovery());
         view.findViewById(R.id.icReelsSearch).setOnClickListener(v ->
-                Toast.makeText(getContext(), "Search: coming soon", Toast.LENGTH_SHORT).show());
+                Toast.makeText(getContext(), getString(R.string.coming_soon_format, getString(R.string.search_label)), Toast.LENGTH_SHORT).show());
 
         BottomNavScrollHelper.attach(recyclerReels, (HomeActivity) requireActivity());
 
@@ -93,7 +93,7 @@ public class ReelsFragment extends Fragment {
             public void onFailure(Call<List<Tour>> call, Throwable t) {
                 if (!isAdded()) return;
                 showEmptyState();
-                Toast.makeText(getContext(), "Unable to load video from the server", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), R.string.video_load_error, Toast.LENGTH_SHORT).show();
             }
         });
     }

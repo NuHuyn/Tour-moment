@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Soft white vignette sitting behind navBarContainer (activity_home.xml), covering the bottom
-     strip full-width. Not a real blur of the content behind it (see the translucent card's own
-     note) - just a gradient scrim that fades content out toward the bottom/left/right edges of
-     the nav zone so attention lands on the floating bar itself, matching the soft haze in the
-     Xanh SM reference around its bottom nav. angle=90 (GradientDrawable) draws bottom-to-top, so
-     startColor is the more-opaque one nearest the screen's bottom edge. -->
+     strip full-width. This is a separate, cheap gradient fade - not the capsule's own real blur
+     (that's navBlurView, see activity_home.xml) - it just fades content out toward the bottom
+     edge of the screen so attention lands on the floating capsule itself, matching the soft haze
+     in the reference design around its bottom nav. angle=90 (GradientDrawable) draws
+     bottom-to-top, so startColor is the more-opaque one nearest the screen's bottom edge. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <gradient

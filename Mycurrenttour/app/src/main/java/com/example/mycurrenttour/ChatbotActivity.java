@@ -28,12 +28,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.chip.Chip;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Full-screen "Trip Assistant" chat - pushed from the floating chatbot icon on the Discovery tab
@@ -45,10 +43,6 @@ import java.util.Locale;
  */
 public class ChatbotActivity extends AppCompatActivity {
 
-    private static final String[] QUICK_REPLIES = {
-            "Gợi ý lịch trình 2N1Đ", "Địa điểm check-in đẹp", "Quán ăn ngon", "Chi phí dự kiến"
-    };
-
     private LinearLayout layoutChatMessages;
     private ScrollView scrollChatMessages;
     private EditText edtChatInput;
@@ -57,7 +51,9 @@ public class ChatbotActivity extends AppCompatActivity {
     // user sends their first message.
     private View quickRepliesRow;
     private final Handler chatHandler = new Handler(Looper.getMainLooper());
-    private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
+    // Locale-aware time format (12h/24h per the device's own format setting) instead of a
+    // hardcoded "HH:mm" pattern - resolved in onCreate() since it needs a Context.
+    private java.text.DateFormat timeFormat;
     // Typing-dot bounce animators run on an infinite repeat, so they must be tracked and cancelled
     // explicitly - onDestroy() won't stop them on its own.
     private final List<Animator> activeAnimators = new ArrayList<>();
@@ -66,6 +62,7 @@ public class ChatbotActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chatbot);
+        timeFormat = android.text.format.DateFormat.getTimeFormat(this);
 
         layoutChatMessages = findViewById(R.id.layoutChatMessages);
         scrollChatMessages = findViewById(R.id.scrollChatMessages);
@@ -74,7 +71,7 @@ public class ChatbotActivity extends AppCompatActivity {
 
         findViewById(R.id.btnChatBack).setOnClickListener(v -> finish());
         findViewById(R.id.btnChatMenu).setOnClickListener(v ->
-                Toast.makeText(this, "Menu: coming soon", Toast.LENGTH_SHORT).show());
+                Toast.makeText(this, getString(R.string.coming_soon_format, getString(R.string.feature_menu)), Toast.LENGTH_SHORT).show());
         btnSendChat.setOnClickListener(v -> sendChatMessage());
         edtChatInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEND || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
@@ -84,7 +81,7 @@ public class ChatbotActivity extends AppCompatActivity {
             return false;
         });
 
-        addBotBubble("Xin chào! Mình có thể hỗ trợ gì cho chuyến đi của bạn hôm nay? 🌿");
+        addBotBubble(getString(R.string.chatbot_greeting));
         setupQuickReplies();
     }
 
@@ -109,7 +106,7 @@ public class ChatbotActivity extends AppCompatActivity {
         View typingRow = addTypingIndicator();
         chatHandler.postDelayed(() -> {
             removeTypingIndicator(typingRow);
-            addBotBubble("Đây là chuyến đi mình nghĩ bạn sẽ thích:");
+            addBotBubble(getString(R.string.chatbot_suggestion_intro));
             Tour suggestion = MockDataProvider.getMockTours().get(0);
             addTourSuggestionCard(suggestion);
         }, 1200);
@@ -127,7 +124,7 @@ public class ChatbotActivity extends AppCompatActivity {
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         int strokeColor = Color.parseColor("#2E7D32");
-        for (String suggestion : QUICK_REPLIES) {
+        for (String suggestion : getResources().getStringArray(R.array.quick_replies)) {
             Chip chip = new Chip(this);
             chip.setText(suggestion);
             chip.setCheckable(false);
@@ -135,12 +132,29 @@ public class ChatbotActivity extends AppCompatActivity {
             chip.setChipStrokeColor(ColorStateList.valueOf(strokeColor));
             chip.setChipStrokeWidth(dp(1));
             chip.setTextColor(strokeColor);
-            chip.setTextSize(13);
+            chip.setTextSize(14);
             chip.setEnsureMinTouchTargetSize(false);
+            // Comfortable breathing room around the label - ChipDrawable's own padding fields,
+            // not View.setPadding(), since Chip renders its background/text via a single
+            // ChipDrawable rather than a normal View background. chipMinHeight is what actually
+            // grows the pill vertically (Chip has no separate top/bottom padding field - height
+            // above the min the text needs is centered automatically).
+            chip.setChipStartPadding(dp(18));
+            chip.setChipEndPadding(dp(18));
+            chip.setChipMinHeight(dp(46));
+            // Oversized on purpose - Material's shape system clamps corner size to half the
+            // chip's actual (shorter) side, so this guarantees a full pill/capsule regardless of
+            // chipMinHeight above, instead of hardcoding a radius that only happens to match it.
+            chip.setChipCornerRadius(dp(100));
 
+            // WRAP_CONTENT (not MATCH_PARENT) so each chip sizes to its own label instead of
+            // stretching into a full-width bar; chipColumn is a vertical LinearLayout, whose
+            // children left-align by default, matching the target design's compact left-aligned
+            // stack of pills.
             LinearLayout.LayoutParams chipLp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            chipLp.topMargin = dp(6);
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            chipLp.gravity = Gravity.START;
+            chipLp.topMargin = dp(10);
             chip.setLayoutParams(chipLp);
 
             chip.setOnClickListener(v -> {
@@ -169,7 +183,8 @@ public class ChatbotActivity extends AppCompatActivity {
                 .withEndAction(() -> layoutChatMessages.removeView(row)).start();
     }
 
-    /** Bot bubble - avatar + bubble + timestamp row (item_chat_bot_message.xml), left-aligned. */
+    /** Bot bubble - text + timestamp inside one rounded container (item_chat_bot_message.xml),
+     *  no avatar, left-aligned. */
     private void addBotBubble(String text) {
         View row = LayoutInflater.from(this).inflate(R.layout.item_chat_bot_message, layoutChatMessages, false);
         TextView bubble = row.findViewById(R.id.txtBotBubble);

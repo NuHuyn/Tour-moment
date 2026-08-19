@@ -29,22 +29,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
-        <ImageView
-            android:id="@+id/icSettingsHeader"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginTop="18dp"
-            android:layout_marginEnd="18dp"
-            android:padding="4dp"
-            android:tint="@color/white"
-            android:contentDescription="Settings"
-            android:src="@drawable/ic_settings"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
         <!-- Circular avatar, straddling the header/white boundary -->
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/imgAvatarProfile"
@@ -67,7 +51,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:text="Full Name"
+            android:text="@string/profile_full_name_placeholder"
             android:textColor="@color/black"
             android:textSize="20sp"
             android:textStyle="bold"
@@ -80,7 +64,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Travel Lover"
+            android:text="@string/tagline_travel_lover"
             android:textColor="@color/brand_green"
             android:textSize="14sp"
             app:layout_constraintTop_toBottomOf="@id/txtFullNameProfile"
@@ -126,7 +110,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="14dp"
-                        android:text="example@mail.com"
+                        android:text="@string/profile_email_placeholder"
                         android:textColor="@color/black"
                         android:textSize="15sp" />
                 </LinearLayout>
@@ -157,7 +141,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="14dp"
-                        android:text="0912345678"
+                        android:text="@string/profile_phone_placeholder"
                         android:textColor="@color/black"
                         android:textSize="15sp" />
                 </LinearLayout>
@@ -188,7 +172,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="14dp"
-                        android:text="Customer"
+                        android:text="@string/role_customer"
                         android:textColor="@color/black"
                         android:textSize="15sp" />
                 </LinearLayout>
@@ -202,7 +186,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="22dp"
             android:layout_marginStart="24dp"
-            android:text="More"
+            android:text="@string/menu_more_label"
             android:textColor="@color/text_gray"
             android:textSize="14sp"
             android:textStyle="bold"
@@ -254,7 +238,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="16dp"
-                        android:text="Saved Places"
+                        android:text="@string/menu_saved_places"
                         android:textColor="@color/black"
                         android:textSize="15sp" />
 
@@ -296,7 +280,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="16dp"
-                        android:text="Payment Methods"
+                        android:text="@string/menu_payment_methods"
                         android:textColor="@color/black"
                         android:textSize="15sp" />
 
@@ -338,7 +322,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="16dp"
-                        android:text="Notifications"
+                        android:text="@string/menu_notifications"
                         android:textColor="@color/black"
                         android:textSize="15sp" />
 
@@ -380,7 +364,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="16dp"
-                        android:text="Help &amp; Support"
+                        android:text="@string/menu_help_support"
                         android:textColor="@color/black"
                         android:textSize="15sp" />
 
@@ -422,7 +406,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="16dp"
-                        android:text="Settings"
+                        android:text="@string/menu_language_settings"
                         android:textColor="@color/black"
                         android:textSize="15sp" />
 
@@ -464,7 +448,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="16dp"
-                        android:text="Log out"
+                        android:text="@string/logout_title"
                         android:textColor="@color/error_red"
                         android:textSize="15sp"
                         android:textStyle="bold" />

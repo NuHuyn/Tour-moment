@@ -107,24 +107,14 @@
                 android:textSize="12sp"
                 android:visibility="gone" />
 
-            <!-- Price (left) + "+Add this Tour" pill (right) on the same row, matching the
-                 reference layout. Same txtLogExpenseItem/btnAddTourItem ids and the same
-                 TourAdapter binding logic - only the container arrangement changed. -->
+            <!-- "+Add this Tour" pill, right-aligned (was sharing this row with a price TextView
+                 on the left - pricing was removed, this is out of scope for the project). -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:gravity="center_vertical"
+                android:gravity="center_vertical|end"
                 android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/txtLogExpenseItem"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Total cost: $0"
-                    android:textColor="#757575"
-                    android:textSize="14sp" />
 
                 <TextView
                     android:id="@+id/btnAddTourItem"

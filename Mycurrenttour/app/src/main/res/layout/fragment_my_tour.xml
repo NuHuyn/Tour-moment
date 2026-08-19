@@ -10,13 +10,26 @@
      MyTourFragment's existing per-chip OnClickListener -> switchFilter(status) calls are
      untouched (Trip's still opens CreateTourActivity instead of filtering) - only what gets
      inflated, and now the single-selection grouping, changed. -->
-<ScrollView
-    android:id="@+id/scrollMyTour"
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#FAFAFA">
+    android:layout_height="match_parent">
+
+    <!-- Leafy/mountain illustration behind the whole screen (bg_mytravel.png) - sits under the
+         scrollable content below, same idea as the login screen's full-bleed background. -->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/bg_mytravel"
+        android:contentDescription="@null" />
+
+    <ScrollView
+        android:id="@+id/scrollMyTour"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent">
 
     <LinearLayout
         android:orientation="vertical"
@@ -30,7 +43,7 @@
             android:layout_height="wrap_content"
             android:paddingTop="8dp"
             android:layout_marginBottom="24dp"
-            android:text="My Travel"
+            android:text="@string/my_travel_title"
             android:textSize="32sp"
             android:textStyle="bold"
             android:textColor="#212121"/>
@@ -53,7 +66,7 @@
                     android:id="@+id/btnTrip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Trip"
+                    android:text="@string/chip_trip"
                     android:textColor="@color/chip_filter_text"
                     app:chipBackgroundColor="@color/chip_filter_bg"
                     app:chipStrokeColor="@color/chip_filter_stroke"
@@ -64,7 +77,7 @@
                     android:id="@+id/btnUpcoming"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Upcoming"
+                    android:text="@string/chip_upcoming"
                     android:checked="true"
                     android:textColor="@color/chip_filter_text"
                     app:chipBackgroundColor="@color/chip_filter_bg"
@@ -76,7 +89,7 @@
                     android:id="@+id/btnOngoing"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Ongoing"
+                    android:text="@string/chip_ongoing"
                     android:textColor="@color/chip_filter_text"
                     app:chipBackgroundColor="@color/chip_filter_bg"
                     app:chipStrokeColor="@color/chip_filter_stroke"
@@ -87,7 +100,7 @@
                     android:id="@+id/btnCompleted"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Completed"
+                    android:text="@string/chip_completed"
                     android:textColor="@color/chip_filter_text"
                     app:chipBackgroundColor="@color/chip_filter_bg"
                     app:chipStrokeColor="@color/chip_filter_stroke"
@@ -103,4 +116,5 @@
             android:layout_marginTop="8dp" />
 
     </LinearLayout>
-</ScrollView>
+    </ScrollView>
+</FrameLayout>

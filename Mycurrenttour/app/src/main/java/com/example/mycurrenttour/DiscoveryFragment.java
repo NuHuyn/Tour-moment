@@ -67,11 +67,6 @@ public class DiscoveryFragment extends Fragment {
     // visit to this tab - a static flag survives this Fragment being recreated on every tab
     // switch, but resets naturally when the app process is killed and relaunched.
     private static boolean cloudHintShownThisSession = false;
-    private static final String[] CLOUD_HINTS = {
-            "Tôi có thể giúp gì cho bạn?",
-            "Bạn muốn đi đâu hôm nay?",
-            "Hỏi tôi về chuyến đi nhé!"
-    };
     private final Handler cloudHintHandler = new Handler(Looper.getMainLooper());
     private View cloudBubbleContainer;
 
@@ -117,7 +112,8 @@ public class DiscoveryFragment extends Fragment {
         cloudHintShownThisSession = true;
 
         TextView txtCloudBubble = root.findViewById(R.id.txtCloudBubble);
-        txtCloudBubble.setText(CLOUD_HINTS[new Random().nextInt(CLOUD_HINTS.length)]);
+        String[] cloudHints = getResources().getStringArray(R.array.chatbot_cloud_hints);
+        txtCloudBubble.setText(cloudHints[new Random().nextInt(cloudHints.length)]);
 
         cloudHintHandler.postDelayed(() -> {
             if (cloudBubbleContainer == null) return;
@@ -202,7 +198,7 @@ public class DiscoveryFragment extends Fragment {
             } else {
                 Chip chip = root.findViewById(checkedIds.get(0));
                 String category = chip.getText().toString();
-                if (category.equals("Tất cả")) filterTours("");
+                if (category.equals(getString(R.string.chip_all))) filterTours("");
                 else filterTours(category);
             }
         });
@@ -216,17 +212,19 @@ public class DiscoveryFragment extends Fragment {
 
         int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
         String greeting;
-        if (hour >= 5 && hour < 11) greeting = "Chào buổi sáng,";
-        else if (hour >= 11 && hour < 13) greeting = "Chào buổi trưa,";
-        else if (hour >= 13 && hour < 18) greeting = "Chào buổi chiều,";
-        else greeting = "Chào buổi tối,";
+        if (hour >= 5 && hour < 11) greeting = getString(R.string.greeting_morning);
+        else if (hour >= 11 && hour < 13) greeting = getString(R.string.greeting_midday);
+        else if (hour >= 13 && hour < 18) greeting = getString(R.string.greeting_afternoon);
+        else greeting = getString(R.string.greeting_evening);
         txtWelcome.setText(greeting);
 
         SessionManager.SignInType signInType = SessionManager.getSignInType(getContext());
         String name = signInType == SessionManager.SignInType.GOOGLE
                 ? SessionManager.getDisplayName(getContext())
                 : null;
-        txtUserName.setText((name != null ? name : (signInType == SessionManager.SignInType.GOOGLE ? "Traveler" : "Guest")) + "!");
+        String fallback = getString(signInType == SessionManager.SignInType.GOOGLE
+                ? R.string.default_name_traveler : R.string.default_name_guest);
+        txtUserName.setText((name != null ? name : fallback) + "!");
     }
 
     /** Avatar: Guest -> avt_guest, Google -> the real photo from the (local-only) Google
@@ -307,7 +305,7 @@ public class DiscoveryFragment extends Fragment {
             @Override
             public void onFailure(Call<List<Tour>> call, Throwable t) {
                 if (!isAdded()) return;
-                Toast.makeText(getContext(), "Network Error", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), R.string.network_error, Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -315,13 +313,13 @@ public class DiscoveryFragment extends Fragment {
     private void showLogoutDialog() {
         if (getContext() == null) return;
         new AlertDialog.Builder(getContext())
-                .setTitle("Log out")
-                .setMessage("Are you sure you want to log out?")
-                .setPositiveButton("Yes", (d, w) -> {
+                .setTitle(R.string.logout_title)
+                .setMessage(R.string.logout_message)
+                .setPositiveButton(R.string.dialog_yes, (d, w) -> {
                     SessionManager.clear(getContext());
                     startActivity(new Intent(getContext(), LoginActivity.class));
                     requireActivity().finish();
                 })
-                .setNegativeButton("No", null).show();
+                .setNegativeButton(R.string.dialog_no, null).show();
     }
 }

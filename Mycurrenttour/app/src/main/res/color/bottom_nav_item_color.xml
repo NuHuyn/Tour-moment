@@ -4,5 +4,5 @@
      on the BottomNavigationView in activity_home.xml. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:color="@color/brand_green" android:state_checked="true" />
-    <item android:color="#9E9E9E" />
+    <item android:color="@color/bottom_nav_inactive_gray" />
 </selector>

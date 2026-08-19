@@ -28,10 +28,23 @@
         <item name="cornerSize">16dp</item>
     </style>
 
-    <!-- Bottom nav's active-tab pill, recolored green (default Material3 token is
-         colorSecondaryContainer, which without this override renders as the baseline theme's
-         purple instead of matching the rest of the app). -->
+    <!-- Tour Detail's full-bleed photo carousel (activity_tour_detail.xml) - square top (flush
+         with the screen edge), rounded bottom where it meets the white content sheet below. -->
+    <style name="RoundedBottomCorner24dp">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">0dp</item>
+        <item name="cornerSizeTopRight">0dp</item>
+        <item name="cornerSizeBottomLeft">24dp</item>
+        <item name="cornerSizeBottomRight">24dp</item>
+    </style>
+
+    <!-- Bottom nav's active-tab indicator, made fully transparent - the redesigned floating
+         capsule nav (activity_home.xml) shows active state purely via the icon/label turning
+         green (bottom_nav_icon_color.xml / bottom_nav_item_color.xml) plus HomeActivity's
+         scale+color-fade animation, not a filled pill behind the icon. The style is kept (rather
+         than deleted) so BottomNavigationView still reserves its normal layout space for the
+         indicator - only its color changes. -->
     <style name="ActiveIndicator.MyCurrentTour" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
-        <item name="android:color">@color/brand_green</item>
+        <item name="android:color">@android:color/transparent</item>
     </style>
 </resources>

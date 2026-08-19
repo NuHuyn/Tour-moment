@@ -1,0 +1,115 @@
+<resources>
+    <!-- ================= Shared / common ================= -->
+    <string name="back">Back</string>
+    <string name="recenter">Recenter map</string>
+    <string name="favorite">Favorite</string>
+    <string name="share">Share</string>
+    <string name="dialog_yes">Yes</string>
+    <string name="dialog_no">No</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="logout_title">Log out</string>
+    <string name="logout_message">Are you sure you want to log out?</string>
+    <string name="network_error">Network error</string>
+    <string name="default_name_traveler">Traveler</string>
+    <string name="default_name_guest">Guest</string>
+    <string name="not_available">N/A</string>
+    <string name="not_provided">Not provided</string>
+    <string name="coming_soon_format">%1$s: Coming soon</string>
+
+    <!-- ================= Discovery tab ================= -->
+    <string name="greeting_morning">Good morning,</string>
+    <string name="greeting_midday">Good midday,</string>
+    <string name="greeting_afternoon">Good afternoon,</string>
+    <string name="greeting_evening">Good evening,</string>
+    <string name="search_hint">Where do you want to go?</string>
+    <string name="chip_all">All</string>
+    <string name="popular_label">Popular</string>
+    <string name="view_more">View more</string>
+    <string name="all_tours_label">All Tours</string>
+    <string name="cd_profile">Profile</string>
+    <string name="cd_open_chat">Open trip assistant chat</string>
+    <string-array name="chatbot_cloud_hints">
+        <item>How can I help you?</item>
+        <item>Where would you like to go today?</item>
+        <item>Ask me about your trip!</item>
+    </string-array>
+
+    <!-- ================= Reels tab ================= -->
+    <string name="search_label">Search</string>
+    <string name="video_load_error">Unable to load video from the server</string>
+    <string name="reels_title">Reels</string>
+    <string name="no_video_title">No videos yet</string>
+    <string name="no_video_subtitle">Video feature is coming soon.\nPlease check back later!</string>
+    <string name="explore_tours_cta">Explore tours</string>
+
+    <!-- ================= Profile tab ================= -->
+    <string name="tagline_travel_lover">Travel Lover</string>
+    <string name="not_signed_in">Not signed in</string>
+    <string name="role_customer">Customer</string>
+    <string name="menu_saved_places">Saved Places</string>
+    <string name="menu_payment_methods">Payment Methods</string>
+    <string name="menu_notifications">Notifications</string>
+    <string name="menu_help_support">Help &amp; Support</string>
+    <string name="menu_language_settings">Language</string>
+    <string name="menu_more_label">More</string>
+    <string name="language_vietnamese">Tiếng Việt</string>
+    <string name="language_english">English</string>
+    <string name="profile_full_name_placeholder">Full Name</string>
+    <string name="profile_email_placeholder">example@mail.com</string>
+    <string name="profile_phone_placeholder">0912345678</string>
+
+    <!-- ================= My Tour tab ================= -->
+    <string name="my_travel_title">My Travel</string>
+    <string name="chip_trip">Trip</string>
+    <string name="chip_upcoming">Upcoming</string>
+    <string name="chip_ongoing">Ongoing</string>
+    <string name="chip_completed">Completed</string>
+    <string name="status_upcoming">Upcoming</string>
+    <string name="status_ongoing">Ongoing</string>
+    <string name="status_completed">Completed</string>
+    <string name="no_tours_found_format">No %1$s tours found.</string>
+
+    <!-- ================= Trip Assistant (Chatbot) ================= -->
+    <string name="trip_assistant_title">Trip Assistant</string>
+    <string name="cd_back_to_discovery">Back to Discovery</string>
+    <string name="cd_more_options">More options</string>
+    <string name="cd_send_message">Send message</string>
+    <string name="chat_input_hint">Type a message...</string>
+    <string name="feature_menu">Menu</string>
+    <string name="chatbot_greeting">Hi! How can I help with your trip today? 🌿</string>
+    <string name="chatbot_suggestion_intro">Here\'s a trip I think you\'ll like:</string>
+    <string-array name="quick_replies">
+        <item>Suggest a 2D1N itinerary</item>
+        <item>Great photo spots</item>
+        <item>Good places to eat</item>
+        <item>Estimated costs</item>
+    </string-array>
+
+    <!-- ================= Tour Detail ================= -->
+    <string name="invalid_data">Invalid data!</string>
+    <string name="no_photos_error">No photos to play video!</string>
+    <string name="unnamed_trip">Unnamed trip</string>
+    <string name="provider_by_format">by %1$s</string>
+    <string name="tour_duration_format">%1$dD%2$dN</string>
+    <string name="share_via">Share via</string>
+    <string name="share_text_fallback">Discover this trip on TourMoment!</string>
+    <string name="show_more_toggle">Show more ⌄</string>
+    <string name="show_less_toggle">Show less ⌃</string>
+    <string name="label_tour_code">Tour code</string>
+    <string name="label_duration">Duration</string>
+    <string name="label_seats_left">Seats left</string>
+    <string name="label_start_date">Start date</string>
+    <string name="label_end_date">End date</string>
+    <string name="label_explore_destinations">Explore destinations</string>
+    <string name="label_video_preview">Video preview</string>
+    <string name="label_description">Description</string>
+    <string name="btn_view_route">View route</string>
+    <string name="tour_name_placeholder">Tour name</string>
+    <string name="description_placeholder">Detailed description...</string>
+    <string name="provider_placeholder">by Traveler</string>
+    <string name="review_count_placeholder">(0 reviews)</string>
+    <plurals name="review_count">
+        <item quantity="one">(%d review)</item>
+        <item quantity="other">(%d reviews)</item>
+    </plurals>
+</resources>

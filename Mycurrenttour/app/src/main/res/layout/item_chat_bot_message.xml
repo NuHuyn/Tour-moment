@@ -1,31 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One bot message row inside ChatbotActivity's message list: bubble + small timestamp
-     underneath, left-aligned (see Gravity.START applied when this is added to
-     layoutChatMessages). No avatar - neither side shows one, so the chat reads more like texting
-     a real person than talking to a bot. -->
+<!-- One bot message row inside ChatbotActivity's message list: single bubble container (bg on
+     the LinearLayout itself, not just the text) holding the message text + a small timestamp
+     pinned bottom-right INSIDE it, left-aligned as a whole (see Gravity.START applied when this
+     is added to layoutChatMessages). No avatar - neither side shows one, so the chat reads more
+     like texting a real person than talking to a bot. -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="@drawable/bg_bubble_bot"
+    android:elevation="4dp"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="14dp"
+    android:paddingBottom="12dp">
 
     <TextView
         android:id="@+id/txtBotBubble"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_bubble_bot"
-        android:elevation="4dp"
         android:textColor="#212121"
-        android:textSize="14sp"
-        android:lineSpacingExtra="2dp"
-        android:padding="10dp" />
+        android:textSize="15sp"
+        android:lineSpacingExtra="3dp" />
 
     <TextView
         android:id="@+id/txtBotTimestamp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
-        android:layout_marginTop="3dp"
+        android:layout_gravity="end"
+        android:layout_marginTop="6dp"
         android:textColor="#9E9E9E"
-        android:textSize="10sp" />
+        android:textSize="11sp" />
 </LinearLayout>
