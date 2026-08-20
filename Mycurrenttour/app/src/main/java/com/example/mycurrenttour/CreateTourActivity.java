@@ -258,7 +258,7 @@ public class CreateTourActivity extends AppCompatActivity {
             double lng = Double.parseDouble(edtLng.getText().toString());
             Tour.Coordinate coord = new Tour.Coordinate();
             coord.setType("Point");
-            coord.setCoordinates(Arrays.asList(lng, lat));
+            coord.setCoordinates(GisHelper.swapToGeoJsonCoordinates(lat, lng));
             wp.setCoordinate(coord);
         } catch (Exception e) {}
         return wp;
@@ -310,6 +310,18 @@ public class CreateTourActivity extends AppCompatActivity {
             isSelectingCover = false;
             currentWpImageView = imgWpPreview;
             openGallery();
+        });
+
+        v.findViewById(R.id.btnGetLocation).setOnClickListener(view -> {
+            int index = waypointContainer.indexOfChild(v);
+            if (index < 0) {
+                index = waypointContainer.getChildCount();
+            }
+            GisHelper.MockLocation mockLoc = GisHelper.getMockLocationForIndex(index);
+            
+            ((TextInputEditText) v.findViewById(R.id.edtWpLocationName)).setText(mockLoc.getLocationName());
+            ((TextInputEditText) v.findViewById(R.id.edtWpLat)).setText(String.valueOf(mockLoc.getLatitude()));
+            ((TextInputEditText) v.findViewById(R.id.edtWpLng)).setText(String.valueOf(mockLoc.getLongitude()));
         });
 
         v.findViewById(R.id.btnRemoveWp).setOnClickListener(view -> waypointContainer.removeView(v));

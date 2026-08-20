@@ -31,9 +31,10 @@ public class AddWaypointActivity extends AppCompatActivity {
 
     private EditText edtName, edtNote, edtPrice, edtLat, edtLng;
     private ImageView imgPreview;
-    private Button btnSelectImg, btnSaveWp, btnFinish;
+    private Button btnSelectImg, btnSaveWp, btnFinish, btnGetLocation;
 
     private String currentTourId;
+    private int locationIndex = 0;
     private String uploadedPath = "";
     private ApiService apiService;
 
@@ -50,6 +51,13 @@ public class AddWaypointActivity extends AppCompatActivity {
 
         btnSelectImg.setOnClickListener(v -> openGallery());
         btnSaveWp.setOnClickListener(v -> onSavePointClick());
+        btnGetLocation.setOnClickListener(v -> {
+            GisHelper.MockLocation mockLoc = GisHelper.getMockLocationForIndex(locationIndex);
+            edtName.setText(mockLoc.getLocationName());
+            edtLat.setText(String.valueOf(mockLoc.getLatitude()));
+            edtLng.setText(String.valueOf(mockLoc.getLongitude()));
+            locationIndex++;
+        });
 
 
         btnFinish.setOnClickListener(v -> {
@@ -70,6 +78,7 @@ public class AddWaypointActivity extends AppCompatActivity {
         btnSelectImg = findViewById(R.id.btnSelectImg);
         btnSaveWp = findViewById(R.id.btnSaveWp);
         btnFinish = findViewById(R.id.btnFinishJourney);
+        btnGetLocation = findViewById(R.id.btnGetLocation);
     }
 
     private void openGallery() {
@@ -132,7 +141,7 @@ public class AddWaypointActivity extends AppCompatActivity {
 
             Tour.Coordinate coord = new Tour.Coordinate();
             coord.setType("Point");
-            coord.setCoordinates(Arrays.asList(
+            coord.setCoordinates(GisHelper.swapToGeoJsonCoordinates(
                     Double.parseDouble(latStr),
                     Double.parseDouble(lngStr)
             ));
