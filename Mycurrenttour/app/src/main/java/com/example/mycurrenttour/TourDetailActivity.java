@@ -259,10 +259,16 @@ public class TourDetailActivity extends AppCompatActivity {
                 ? tour.getAuthor().getDisplayName() : getString(R.string.default_name_traveler);
         txtProviderDetail.setText(getString(R.string.provider_by_format, providerName));
 
-        Picasso.get().load(tour.getImageUrl())
-                .placeholder(R.drawable.centralvietnam)
-                .error(R.drawable.centralvietnam)
-                .into(imgTour);
+        // Picasso.load("") throws IllegalArgumentException ("Path must not be empty") - guard
+        // against an empty/missing imageUrl the same way TourAdapter does.
+        if (tour.getImageUrl() != null && !tour.getImageUrl().isEmpty()) {
+            Picasso.get().load(tour.getImageUrl())
+                    .placeholder(R.drawable.centralvietnam)
+                    .error(R.drawable.centralvietnam)
+                    .into(imgTour);
+        } else {
+            imgTour.setImageResource(R.drawable.centralvietnam);
+        }
 
         txtIdDetail.setText(tour.getId() != null ? tour.getId() : getString(R.string.not_available));
         txtDurationDetail.setText(buildDuration(tour));

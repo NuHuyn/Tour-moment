@@ -1,5 +1,6 @@
 package com.example.mycurrenttour;
 
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.view.LayoutInflater;
@@ -12,7 +13,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.squareup.picasso.Picasso;
 
 import java.text.SimpleDateFormat;
@@ -94,7 +94,15 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
 
         // 1. Basic Info
         holder.txtTitle.setText(tour.getTitle() != null ? tour.getTitle() : "Unnamed trip");
-        Picasso.get().load(tour.getImageUrl()).placeholder(R.drawable.centralvietnam).into(holder.imgTour);
+        // Picasso.load("") throws IllegalArgumentException ("Path must not be empty") - it only
+        // tolerates null, not empty string. Backend data can legitimately have an empty/missing
+        // imageUrl (e.g. a tour created without a cover photo), so this must be guarded the same
+        // way the author-photo branch below is.
+        if (tour.getImageUrl() != null && !tour.getImageUrl().isEmpty()) {
+            Picasso.get().load(tour.getImageUrl()).placeholder(R.drawable.centralvietnam).into(holder.imgTour);
+        } else {
+            holder.imgTour.setImageResource(R.drawable.centralvietnam);
+        }
 
         // Reset UI States
         holder.txtStartDate.setVisibility(View.GONE);
@@ -124,19 +132,24 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
             String authorName = (tour.getAuthor() != null) ? tour.getAuthor().getDisplayName() : "Traveler";
             holder.txtAuthorName.setText(authorName);
 
-            if (tour.getAuthor() != null && tour.getAuthor().getPhotoUrl() != null) {
+            // Same Picasso.load("") crash as above ("Path must not be empty") - the backend's
+            // getPublicTours fallback author object can have an empty/null photoUrl when no
+            // matching User row exists for a tour's authorId (e.g. seed/demo data).
+            if (tour.getAuthor() != null && tour.getAuthor().getPhotoUrl() != null && !tour.getAuthor().getPhotoUrl().isEmpty()) {
                 Picasso.get().load(tour.getAuthor().getPhotoUrl()).placeholder(R.drawable.ic_person).into(holder.imgAuthor);
             } else {
                 holder.imgAuthor.setImageResource(R.drawable.ic_person);
             }
 
             holder.btnAddTour.setVisibility(View.VISIBLE);
-            holder.btnAddTour.setText("+ Add this Tour");
-            holder.btnAddTour.getBackground().setTint(Color.parseColor("#81C784"));
+            // Reflects AddedTourManager's persisted state so the button shows "Added" correctly
+            // after scrolling away and back, or reopening the app - not just right after tapping.
+            String viewerId = SessionManager.getUserId(holder.itemView.getContext());
+            boolean alreadyAdded = AddedTourManager.isAdded(holder.itemView.getContext(), viewerId, tour.getId());
+            setAddButtonState(holder, alreadyAdded);
             holder.btnAddTour.setOnClickListener(v -> {
+                if (holder.btnAddTour.getText().toString().equals("Added")) return; // already added, no-op
                 copyTour(tour, holder);
-                holder.btnAddTour.setText("Added");
-                holder.btnAddTour.getBackground().setTint(Color.parseColor("#2E7D32"));
             });
 
         } else {
@@ -224,18 +237,53 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
         });
     }
 
+    /** "+ Add this Tour" -> POST /api/tours/copy/:tourId, which clones the tour server-side with
+     *  authorId = the current viewer (Google account or local guest id - see SessionManager), so
+     *  it shows up in that user's My Travel (MyTourFragment's getMyTours query filters by the
+     *  same authorId). Only marks the button/local "added" state once the server confirms the
+     *  copy actually happened, not optimistically on tap. */
     private void copyTour(Tour tour, ViewHolder holder) {
-        String myId = FirebaseAuth.getInstance().getUid();
-        if (myId == null) return;
+        Context context = holder.itemView.getContext();
+        // Real Google-account id or local guest id (SessionManager.saveGuestSession gives every
+        // guest session a persistent local id) - both work identically here since the backend
+        // just stores whatever string it's given as authorId, no real User row required.
+        String myId = SessionManager.getUserId(context);
+        if (myId == null) {
+            Toast.makeText(context, "Please sign in or continue as guest first", Toast.LENGTH_SHORT).show();
+            return;
+        }
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
         apiService.copyTour(tour.getId(), new ApiService.UserCopyRequest(myId)).enqueue(new Callback<Tour>() {
             @Override
             public void onResponse(Call<Tour> call, Response<Tour> response) {
-                if (response.isSuccessful()) Toast.makeText(holder.itemView.getContext(), "Added to Upcoming!", Toast.LENGTH_SHORT).show();
+                if (response.isSuccessful()) {
+                    AddedTourManager.markAdded(context, myId, tour.getId());
+                    setAddButtonState(holder, true);
+                    Toast.makeText(context, "Added to My Travel!", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(context, "Could not add tour, please try again", Toast.LENGTH_SHORT).show();
+                }
             }
             @Override
-            public void onFailure(Call<Tour> call, Throwable t) {}
+            public void onFailure(Call<Tour> call, Throwable t) {
+                Toast.makeText(context, "Could not reach server, please try again", Toast.LENGTH_SHORT).show();
+            }
         });
+    }
+
+    /** Sets the "+ Add this Tour" button's text/color/enabled state for either the not-yet-added
+     *  or already-added look. Centralized so onBindViewHolder's initial state and copyTour's
+     *  post-success update never drift apart. */
+    private void setAddButtonState(ViewHolder holder, boolean added) {
+        if (added) {
+            holder.btnAddTour.setText("Added");
+            holder.btnAddTour.getBackground().setTint(Color.parseColor("#2E7D32"));
+            holder.btnAddTour.setEnabled(false);
+        } else {
+            holder.btnAddTour.setText("+ Add this Tour");
+            holder.btnAddTour.getBackground().setTint(Color.parseColor("#81C784"));
+            holder.btnAddTour.setEnabled(true);
+        }
     }
 
     private void updateShareButtonUI(ViewHolder holder, boolean isShared) {

@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -51,6 +52,7 @@ public class DiscoveryFragment extends Fragment {
     private TextView txtWelcome, txtUserName;
     private EditText edtSearch;
     private RecyclerView recyclerTours, recyclerPopular;
+    private ProgressBar progressDiscovery;
     private TourAdapter adapter;
     private PopularAdapter popularAdapter;
     private ChipGroup chipGroup;
@@ -62,6 +64,17 @@ public class DiscoveryFragment extends Fragment {
     private static final int HEADER_FADE_DISTANCE_DP = 320;
 
     private List<Tour> originalList = new ArrayList<>();
+    // Bumped on every loadTours() call and captured per-request, same pattern as
+    // MyTourFragment.loadRequestId - guards against a slower/older response landing after a
+    // newer one (e.g. re-entering this tab fires another load before the previous one resolved)
+    // and overwriting more current data.
+    private int loadRequestId = 0;
+    // Last search box text / selected chip category passed to filterTours (both funnel through
+    // the same "query" string - see filterTours). Re-applied after every loadTours() reload so
+    // returning to this tab (onResume now re-fetches) doesn't silently drop back to "All Tours"
+    // while the search box text or a non-"All" chip still shows as active - the same
+    // UI/data-desync bug as MyTourFragment's filter chips, just for search/region filtering here.
+    private String currentQuery = "";
 
     // Cloud hint above the chatbot FAB: shows once per app process ("session"), not once per
     // visit to this tab - a static flag survives this Fragment being recreated on every tab
@@ -84,10 +97,20 @@ public class DiscoveryFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         initViews(view);
-        loadTours();
 
         view.findViewById(R.id.btnChatbotFab).setOnClickListener(v -> openChatbot());
         setupChatbotHint(view);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Was only called from onViewCreated(), i.e. once when the tab's view is first created -
+        // switching to another tab and back reused the same (now stale) list instead of
+        // re-fetching, e.g. a tour added from elsewhere wouldn't show up here until the app was
+        // restarted. onResume() fires every time this tab becomes visible again, same pattern as
+        // MyTourFragment.loadMyTours().
+        loadTours();
     }
 
     @Override
@@ -161,6 +184,7 @@ public class DiscoveryFragment extends Fragment {
         chipGroup = root.findViewById(R.id.chipGroup);
         recyclerPopular = root.findViewById(R.id.recyclerPopular);
         recyclerTours = root.findViewById(R.id.recyclerTours);
+        progressDiscovery = root.findViewById(R.id.progressDiscovery);
 
         setupHeaderFade();
 
@@ -186,7 +210,8 @@ public class DiscoveryFragment extends Fragment {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterTours(s.toString());
+                currentQuery = s.toString();
+                filterTours(currentQuery);
             }
             @Override
             public void afterTextChanged(Editable s) {}
@@ -194,13 +219,13 @@ public class DiscoveryFragment extends Fragment {
 
         chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (checkedIds.isEmpty()) {
-                filterTours("");
+                currentQuery = "";
             } else {
                 Chip chip = root.findViewById(checkedIds.get(0));
                 String category = chip.getText().toString();
-                if (category.equals(getString(R.string.chip_all))) filterTours("");
-                else filterTours(category);
+                currentQuery = category.equals(getString(R.string.chip_all)) ? "" : category;
             }
+            filterTours(currentQuery);
         });
     }
 
@@ -280,7 +305,7 @@ public class DiscoveryFragment extends Fragment {
         // TODO: set USE_MOCK_DATA = false khi backend sẵn sàng
         if (MockDataProvider.USE_MOCK_DATA) {
             originalList = MockDataProvider.getMockTours();
-            adapter.updateList(originalList);
+            filterTours(currentQuery);
 
             List<Tour> popularList = originalList.subList(0, Math.min(originalList.size(), 4));
             popularAdapter = new PopularAdapter(getContext(), popularList);
@@ -289,13 +314,22 @@ public class DiscoveryFragment extends Fragment {
         }
 
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
+
+        // Makes the wait visible instead of the screen sitting static, most noticeably during a
+        // Cloud Run cold start (first request after idle can take a couple seconds).
+        if (progressDiscovery != null) progressDiscovery.setVisibility(View.VISIBLE);
+
+        final int requestId = ++loadRequestId;
+
         apiService.getSharedTours().enqueue(new Callback<List<Tour>>() {
             @Override
             public void onResponse(Call<List<Tour>> call, Response<List<Tour>> response) {
                 if (!isAdded()) return;
+                if (requestId != loadRequestId) return; // superseded by a newer loadTours() call
+                if (progressDiscovery != null) progressDiscovery.setVisibility(View.GONE);
                 if (response.isSuccessful() && response.body() != null) {
                     originalList = response.body();
-                    adapter.updateList(originalList);
+                    filterTours(currentQuery);
 
                     List<Tour> popularList = originalList.subList(0, Math.min(originalList.size(), 4));
                     popularAdapter = new PopularAdapter(getContext(), popularList);
@@ -305,6 +339,8 @@ public class DiscoveryFragment extends Fragment {
             @Override
             public void onFailure(Call<List<Tour>> call, Throwable t) {
                 if (!isAdded()) return;
+                if (requestId != loadRequestId) return;
+                if (progressDiscovery != null) progressDiscovery.setVisibility(View.GONE);
                 Toast.makeText(getContext(), R.string.network_error, Toast.LENGTH_SHORT).show();
             }
         });

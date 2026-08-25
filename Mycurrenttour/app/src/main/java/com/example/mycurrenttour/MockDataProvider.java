@@ -15,8 +15,7 @@ import java.util.List;
  */
 public class MockDataProvider {
 
-    // TODO: set USE_MOCK_DATA = false khi backend sẵn sàng
-    public static boolean USE_MOCK_DATA = true;
+    public static boolean USE_MOCK_DATA = false;
 
     public static List<Tour> getMockTours() {
         List<Tour> tours = new ArrayList<>();

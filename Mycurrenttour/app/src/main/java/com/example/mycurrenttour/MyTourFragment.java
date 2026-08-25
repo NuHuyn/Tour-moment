@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.Toast;
 
@@ -16,8 +17,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.chip.Chip;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,9 +32,16 @@ import retrofit2.Response;
 public class MyTourFragment extends Fragment implements TourAdapter.OnTourActionListener {
     private Chip btnTrip, btnUpcoming, btnOngoing, btnCompleted;
     private RecyclerView recyclerMyTours;
+    private ProgressBar progressMyTour;
     private TourAdapter adapter;
     private List<Tour> allToursFromApi = new ArrayList<>();
     private String currentFilter = "Upcoming";
+    // Bumped on every loadMyTours() call and captured per-request; a response is only applied if
+    // it's still the most recent request when it lands. Without this, an older/slower response
+    // (e.g. a filter switch triggered by TourAdapter.onJourneyStarted firing while this fragment
+    // is paused/backgrounded on OngoingMapActivity) can arrive after a newer one and silently
+    // overwrite the list the user is actually looking at with stale/wrong-filter data.
+    private int loadRequestId = 0;
 
     @Nullable
     @Override
@@ -62,6 +68,7 @@ public class MyTourFragment extends Fragment implements TourAdapter.OnTourAction
         btnOngoing = root.findViewById(R.id.btnOngoing);
         btnCompleted = root.findViewById(R.id.btnCompleted);
         recyclerMyTours = root.findViewById(R.id.recyclerMyTours);
+        progressMyTour = root.findViewById(R.id.progressMyTour);
         recyclerMyTours.setLayoutManager(new LinearLayoutManager(getContext()));
         adapter = new TourAdapter(new ArrayList<>(), false, this);
         recyclerMyTours.setAdapter(adapter);
@@ -84,37 +91,67 @@ public class MyTourFragment extends Fragment implements TourAdapter.OnTourAction
 
     public void switchFilter(String status) {
         this.currentFilter = status;
+        syncFilterChipSelection(status);
         loadMyTours();
+    }
+
+    /** Keeps the filter chips' checked/highlighted state in sync with currentFilter even when
+     *  switchFilter() is called programmatically (TourAdapter.onJourneyStarted) instead of from a
+     *  chip tap. The chips only auto-check themselves when the user physically taps one - a code
+     *  path like onJourneyStarted changing currentFilter without going through a real tap left the
+     *  UI showing "Upcoming" highlighted while the list underneath had actually been reloaded under
+     *  "Ongoing", which is what made tours look like they'd silently vanished after starting a
+     *  journey and navigating back. */
+    private void syncFilterChipSelection(String status) {
+        if (btnUpcoming == null || btnOngoing == null || btnCompleted == null) return;
+        btnUpcoming.setChecked(status.equalsIgnoreCase("Upcoming"));
+        btnOngoing.setChecked(status.equalsIgnoreCase("Ongoing"));
+        btnCompleted.setChecked(status.equalsIgnoreCase("Completed"));
     }
 
     private void loadMyTours() {
         if (!isAdded()) return;
-        // TODO: set USE_MOCK_DATA = false khi backend sẵn sàng
-        // Đặt TRƯỚC check FirebaseUser: màn này từng trắng vì login thật (syncUserToBackend)
-        // cũng gọi API thật nên không đăng nhập được khi backend tắt -> currentUser() == null
-        // -> return sớm trước khi kịp chạy nhánh mock. Discover (DiscoveryFragment) không bị vì
-        // không gate theo currentUser.
         if (MockDataProvider.USE_MOCK_DATA) {
             allToursFromApi = MockDataProvider.getMockTours();
             filterByStatus(currentFilter);
             return;
         }
 
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) return;
+        // userId is the backend User._id from LoginActivity's google-login call (SessionManager),
+        // not a Firebase uid - Firebase Auth is never engaged in this app. null here means either
+        // Guest sign-in or not signed in at all, so there is no "my tours" to show.
+        String userId = SessionManager.getUserId(getContext());
+        if (userId == null) return;
 
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
 
-        apiService.getMyTours(user.getUid(), currentFilter).enqueue(new Callback<List<Tour>>() {
+        // Capture both the filter this request was made for and a generation id, so a
+        // slower/older response landing after a newer request was already issued (e.g. the
+        // onJourneyStarted-triggered reload racing with this screen's own onResume reload) gets
+        // dropped instead of overwriting more current data.
+        final String requestedFilter = currentFilter;
+        final int requestId = ++loadRequestId;
+
+        // Only the RecyclerView + chips are already on screen from a previous load, so a bare
+        // spinner (not a full-screen blocker) is enough - it just needs to make the wait visible
+        // instead of the screen sitting static. Most requests resolve fast enough that this is
+        // barely noticeable, but it matters for the Cloud Run cold-start case (first request after
+        // idle can take a couple seconds) where otherwise nothing on screen indicates anything is
+        // happening.
+        if (progressMyTour != null) progressMyTour.setVisibility(View.VISIBLE);
+
+        apiService.getMyTours(userId, requestedFilter).enqueue(new Callback<List<Tour>>() {
             @Override
             public void onResponse(Call<List<Tour>> call, Response<List<Tour>> response) {
                 if (!isAdded()) return;
+                if (requestId != loadRequestId) return; // superseded by a newer loadMyTours() call
+                if (progressMyTour != null) progressMyTour.setVisibility(View.GONE);
                 if (response.isSuccessful() && response.body() != null) {
                     allToursFromApi = response.body();
                     adapter.updateList(allToursFromApi);
 
                     if (allToursFromApi.isEmpty()) {
-                        Toast.makeText(getContext(), getString(R.string.no_tours_found_format, localizedStatusLabel(currentFilter)), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), getString(R.string.no_tours_found_format, localizedStatusLabel(requestedFilter)), Toast.LENGTH_SHORT).show();
                     }
                 } else {
                     Log.e("API_ERROR", "Response failed: " + response.code());
@@ -123,6 +160,8 @@ public class MyTourFragment extends Fragment implements TourAdapter.OnTourAction
             @Override
             public void onFailure(Call<List<Tour>> call, Throwable t) {
                 if (!isAdded()) return;
+                if (requestId != loadRequestId) return;
+                if (progressMyTour != null) progressMyTour.setVisibility(View.GONE);
                 Log.e("API_ERROR", "Failure: " + t.getMessage());
                 Toast.makeText(getContext(), R.string.network_error, Toast.LENGTH_SHORT).show();
             }

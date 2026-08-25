@@ -243,6 +243,20 @@
     </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Shown while loadTours() has a request in flight (see DiscoveryFragment) - covers both the
+         Cloud Run cold-start case (first request after idle can take a couple seconds) and normal
+         network latency, so the screen never just sits static/unresponsive-looking during a fetch. -->
+    <ProgressBar
+        android:id="@+id/progressDiscovery"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:indeterminateTint="@color/brand_green"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <!-- Floating chatbot launcher - bottom-right corner of the Discovery content area only.
          Pushes ChatbotActivity (full-screen chat) instead of an in-place overlay.
          Circular avatar, same ShapeableImageView + CircleImage pattern used for every other

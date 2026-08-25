@@ -32,6 +32,7 @@ import org.osmdroid.bonuspack.routing.OSRMRoadManager;
 import org.osmdroid.bonuspack.routing.Road;
 import org.osmdroid.bonuspack.routing.RoadManager;
 import org.osmdroid.config.Configuration;
+import org.osmdroid.tileprovider.tilesource.XYTileSource;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
@@ -58,11 +59,37 @@ public class OngoingMapActivity extends AppCompatActivity {
     private TextView badgeUnlockDiscount;
     private BottomSheetBehavior<View> sheetBehavior;
 
+    // Fixed "My Location" start point used by both initRouteOnMap() (full stop list/markers) and
+    // buildUnlockedRoutePoints() (paywall-aware route line) - kept as one field so both stay in
+    // sync instead of two copies of the same literal coordinate drifting apart.
+    private final GeoPoint myLocationStart = new GeoPoint(10.870587770354202, 106.80209416657385);
+    // Outline color of the main dashed route line, so refreshLockedState() can find-and-remove
+    // just that overlay (not the lighter-green per-step highlight from drawStepRoad) before
+    // redrawing it with the current unlock state.
+    private static final int MAIN_ROUTE_COLOR = Color.parseColor("#1B5E20");
+
     // Demo waypoint-lock feature (chưa gắn cổng thanh toán thật, chỉ mô phỏng UI cho báo cáo đồ án).
     // Trạng thái khóa lấy từ WaypointLockManager (persist qua SharedPreferences, dùng chung với
     // TourDetailActivity/Discovery) chứ không tự tính lại từ đầu mỗi lần mở màn nữa.
     // TODO: thay bằng logic khóa dựa trên thanh toán thật khi có backend.
     private Set<Integer> lockedWaypoints = new HashSet<>();
+
+    // Mapbox raster tiles - replaces osmdroid's default TileSourceFactory.MAPNIK, which points
+    // straight at tile.openstreetmap.org. That server is OSMF's volunteer-run demo endpoint and is
+    // explicitly not for production app traffic per their tile usage policy; using it here is what
+    // caused the "Access blocked" 403s. (MapTiler was tried first but its key/account never
+    // resolved; switched to Mapbox's free tier, verified working with a real rendered tile before
+    // wiring in.) Uses Mapbox's current Styles API tile endpoint - the older v4 classic endpoint
+    // returns 410 Gone, Mapbox retired it. XYTileSource appends mImageFilenameEnding right after
+    // {y}, so "?access_token=..." rides along on every tile request with no custom TileSource
+    // subclass needed.
+    private static final XYTileSource MAPBOX_TILE_SOURCE = new XYTileSource(
+            "MapboxStreets",
+            0, 20, 256,
+            "?access_token=" + BuildConfig.MAPBOX_ACCESS_TOKEN,
+            new String[]{"https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/"},
+            "© Mapbox © OpenStreetMap contributors"
+    );
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -140,6 +167,7 @@ public class OngoingMapActivity extends AppCompatActivity {
     }
 
     private void setupMap() {
+        map.setTileSource(MAPBOX_TILE_SOURCE);
         map.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
         map.setMultiTouchControls(true);
         map.getController().setZoom(14.0);
@@ -244,6 +272,7 @@ public class OngoingMapActivity extends AppCompatActivity {
         if (adapter != null) adapter.setLockedPositions(lockedWaypoints);
         updateProgressLabel();
         redrawMarkers();
+        redrawMainRoute();
 
         // Nút "Unlock Now" + badge "-25%" chỉ hiện khi còn step khóa; hết khóa thì ẩn luôn cả 2 (đã unlock hết, không còn gì để bán).
         boolean hasLocked = !lockedWaypoints.isEmpty();
@@ -320,7 +349,7 @@ public class OngoingMapActivity extends AppCompatActivity {
     private List<Marker> stopMarkers = new ArrayList<>();
 
     private void initRouteOnMap() {
-        GeoPoint startPoint = new GeoPoint(10.870587770354202, 106.80209416657385);
+        GeoPoint startPoint = myLocationStart;
         routePoints.clear();
         routePoints.add(startPoint);
 
@@ -353,8 +382,46 @@ public class OngoingMapActivity extends AppCompatActivity {
             }
         }
 
-        drawFullDetailedRoad();
+        // Only route through unlocked stops - drawing the road all the way to a locked/paywalled
+        // waypoint would show its location for free on the map even though the stop card itself
+        // is locked, defeating the paywall.
+        drawFullDetailedRoad(buildUnlockedRoutePoints());
         map.getController().setCenter(startPoint);
+    }
+
+    /** Start point + every currently-unlocked waypoint, in order, skipping locked ones (which can
+     *  leave gaps - unlockWaypoint() lets a specific step be paid for individually, not just as a
+     *  contiguous prefix). Queries WaypointLockManager directly rather than the lockedWaypoints
+     *  field so it's correct even the very first time it's called from initRouteOnMap(), before
+     *  refreshLockedState() has run. Deliberately a separate list from routePoints, which keeps
+     *  one entry per waypoint regardless of lock state - onStopClick/drawStepRoad/recenterMap all
+     *  index into routePoints assuming that 1:1 correspondence with tour.getWaypoints(). */
+    private List<GeoPoint> buildUnlockedRoutePoints() {
+        List<GeoPoint> points = new ArrayList<>();
+        points.add(myLocationStart);
+        if (tour.getWaypoints() != null) {
+            for (int i = 0; i < tour.getWaypoints().size(); i++) {
+                if (!WaypointLockManager.isUnlocked(this, tour.getId(), i)) continue;
+                Tour.Waypoint wp = tour.getWaypoints().get(i);
+                if (wp.getCoordinate() != null && wp.getCoordinate().getCoordinates() != null) {
+                    List<Double> coords = wp.getCoordinate().getCoordinates();
+                    points.add(new GeoPoint(coords.get(1), coords.get(0)));
+                }
+            }
+        }
+        return points;
+    }
+
+    /** Re-fetches and redraws the main route line after a lock-state change, so unlocking a
+     *  waypoint (individually or via "Unlock full") extends the visible path to it. Removes the
+     *  previous main-route overlay first (matched by MAIN_ROUTE_COLOR, same pattern drawStepRoad
+     *  already uses for its own highlight overlay) so unlocks don't stack multiple stale routes
+     *  on top of each other. */
+    private void redrawMainRoute() {
+        if (map == null) return;
+        map.getOverlays().removeIf(o -> o instanceof Polyline && ((Polyline) o).getOutlinePaint().getColor() == MAIN_ROUTE_COLOR);
+        map.invalidate();
+        drawFullDetailedRoad(buildUnlockedRoutePoints());
     }
 
     /** Re-icons the numbered pins after a lock-state change (kept plain green for now - the
@@ -437,15 +504,15 @@ public class OngoingMapActivity extends AppCompatActivity {
         return new BitmapDrawable(getResources(), bitmap);
     }
 
-    private void drawFullDetailedRoad() {
-        if (routePoints.size() < 2) return;
+    private void drawFullDetailedRoad(List<GeoPoint> points) {
+        if (points.size() < 2) return;
         new Thread(() -> {
             try {
                 RoadManager roadManager = new OSRMRoadManager(getApplicationContext(), getPackageName());
-                Road road = roadManager.getRoad(new ArrayList<>(routePoints));
+                Road road = roadManager.getRoad(new ArrayList<>(points));
                 if (road.mStatus == Road.STATUS_OK) {
                     Polyline roadOverlay = RoadManager.buildRoadOverlay(road);
-                    roadOverlay.getOutlinePaint().setColor(Color.parseColor("#1B5E20"));
+                    roadOverlay.getOutlinePaint().setColor(MAIN_ROUTE_COLOR);
                     roadOverlay.getOutlinePaint().setStrokeWidth(9f);
                     roadOverlay.getOutlinePaint().setPathEffect(new DashPathEffect(new float[]{22f, 16f}, 0));
 

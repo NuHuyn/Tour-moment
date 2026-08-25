@@ -117,4 +117,15 @@
 
     </LinearLayout>
     </ScrollView>
+
+    <!-- Shown while loadMyTours() has a request in flight (see MyTourFragment) - covers both the
+         Cloud Run cold-start case (first request after idle can take a couple seconds) and normal
+         network latency, so the screen never just sits static/unresponsive-looking during a fetch. -->
+    <ProgressBar
+        android:id="@+id/progressMyTour"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:indeterminateTint="@color/brand_green"
+        android:visibility="gone" />
 </FrameLayout>

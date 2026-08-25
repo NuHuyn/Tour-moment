@@ -23,8 +23,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -178,8 +176,10 @@ public class CreateTourActivity extends AppCompatActivity {
     }
 
     private void saveFullTour(String title, String coverUrl) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
+        // userId is the backend User._id from LoginActivity's google-login call (SessionManager),
+        // not a Firebase uid - Firebase Auth is never engaged in this app.
+        String userId = SessionManager.getUserId(this);
+        if (userId == null) {
             Toast.makeText(this, "User not logged in!", Toast.LENGTH_SHORT).show();
             resetSaveButton();
             return;
@@ -192,7 +192,7 @@ public class CreateTourActivity extends AppCompatActivity {
         tour.setTitle(title);
         tour.setDescription(edtTourDesc.getText().toString().trim());
         tour.setImageUrl(coverUrl);
-        tour.setAuthorId(user.getUid());
+        tour.setAuthorId(userId);
         tour.setStatus(spnStatus.getSelectedItem().toString());
         tour.setStartDate(isoFormat.format(startDate));
         tour.setEndDate(isoFormat.format(endDate));

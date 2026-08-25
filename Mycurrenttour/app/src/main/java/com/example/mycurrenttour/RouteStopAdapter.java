@@ -100,7 +100,9 @@ public class RouteStopAdapter extends RecyclerView.Adapter<RouteStopAdapter.View
         holder.txtDesc.setVisibility(desc != null && !desc.trim().isEmpty() ? View.VISIBLE : View.GONE);
         if (desc != null) holder.txtDesc.setText(desc);
 
-        if (wp.getPhotos() != null && !wp.getPhotos().isEmpty()) {
+        // Also guard the first photo string itself, not just the list - Picasso.load("") throws
+        // ("Path must not be empty"), and a non-empty list could still contain an empty string.
+        if (wp.getPhotos() != null && !wp.getPhotos().isEmpty() && !wp.getPhotos().get(0).isEmpty()) {
             Picasso.get().load(wp.getPhotos().get(0))
                     .placeholder(R.drawable.centralvietnam)
                     .error(R.drawable.centralvietnam)
