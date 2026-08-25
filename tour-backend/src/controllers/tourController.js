@@ -168,7 +168,7 @@ const getPublicTours = async (req, res, next) => {
         const authorData = await User.findOne({ googleId: tour.authorId }).select("displayName photoUrl");
         return { 
           ...tour, 
-          author: authorData || { displayName: "Traveler", photoUrl: "" } 
+          author: authorData || { displayName: "Traveler", photoUrl: null }
         };
       })
     );

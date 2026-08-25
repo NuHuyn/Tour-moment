@@ -1,5 +1,9 @@
 const User = require("../models/User");
 
+// TODO: This trusts client-supplied Google account data without server-side ID token
+// verification. Upgrade to proper verification (requestIdToken + google-auth-library) before
+// any production/public release - right now anyone can POST an arbitrary googleId/email and
+// have this upsert a User row as that identity.
 // @desc    Đăng nhập hoặc Đăng ký bằng Google
 // @route   POST /api/auth/google-login
 // @access  Public
