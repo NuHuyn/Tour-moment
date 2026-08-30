@@ -11,6 +11,12 @@ async function startServer() {
     // Kết nối CSDL MongoDB
     await connectDB();
 
+    // Chatbot (DeepSeek) is optional at boot - don't block server startup on it, just warn
+    // loudly so a missing key shows up in the logs instead of as a silent 500 on first chat.
+    if (!process.env.DEEPSEEK_API_KEY) {
+      console.warn("[Server] DEEPSEEK_API_KEY is not set - POST /api/chat will fail until it is configured.");
+    }
+
     // Lắng nghe cổng HTTP
     app.listen(PORT, () => {
       console.log(`[Server] Server running on port ${PORT}`);

@@ -81,6 +81,8 @@
     <string name="feature_menu">Menu</string>
     <string name="chatbot_greeting">Xin chào! Mình có thể hỗ trợ gì cho chuyến đi của bạn hôm nay? 🌿</string>
     <string name="chatbot_suggestion_intro">Đây là chuyến đi mình nghĩ bạn sẽ thích:</string>
+    <string name="chatbot_error_generic">Xin lỗi, mình đang gặp sự cố kết nối. Bạn thử lại sau nhé!</string>
+    <string name="chatbot_guest_input_hint">Đăng nhập để tiếp tục trò chuyện</string>
     <string-array name="quick_replies">
         <item>Gợi ý lịch trình 2N1Đ</item>
         <item>Địa điểm check-in đẹp</item>

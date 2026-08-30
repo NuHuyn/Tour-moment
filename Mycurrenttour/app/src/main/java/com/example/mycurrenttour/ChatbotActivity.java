@@ -6,8 +6,6 @@ import android.animation.ValueAnimator;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -33,13 +31,22 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 /**
  * Full-screen "Trip Assistant" chat - pushed from the floating chatbot icon on the Discovery tab
  * only (see DiscoveryFragment). Own Activity like any other detail screen, so it has no bottom
  * nav and back returns to Discovery.
  *
- * Demo reply only (no AI/RAG backend yet - chưa có DeepSeek+MongoDB): always suggests the first
- * mock tour. TODO: swap replyWithMockSuggestion() for a real API call once the backend is ready.
+ * Backed by POST /api/chat (DeepSeek v4-flash function-calling over read-only tour tools - see
+ * feasibility_report.md, Option A). No server-side chat session: this Activity is the source of
+ * truth for conversation history (chatHistory) and is sent back in full (capped) on every turn.
+ *
+ * Access tier is decided by SessionManager.getSignInType(): a real Google session sends
+ * googleId/email and gets the "authenticated" tier (no message cap) from the backend; a Guest
+ * session sends neither and is capped server-side at 5 messages (see ChatResponse.isCapped()).
  */
 public class ChatbotActivity extends AppCompatActivity {
 
@@ -50,13 +57,30 @@ public class ChatbotActivity extends AppCompatActivity {
     // bubble), not a fixed bottom bar. Tracked here so hideQuickReplies() can remove it once the
     // user sends their first message.
     private View quickRepliesRow;
-    private final Handler chatHandler = new Handler(Looper.getMainLooper());
     // Locale-aware time format (12h/24h per the device's own format setting) instead of a
     // hardcoded "HH:mm" pattern - resolved in onCreate() since it needs a Context.
     private java.text.DateFormat timeFormat;
     // Typing-dot bounce animators run on an infinite repeat, so they must be tracked and cancelled
     // explicitly - onDestroy() won't stop them on its own.
     private final List<Animator> activeAnimators = new ArrayList<>();
+
+    // Conversation so far, sent back to the backend on every turn (no server-side chat session -
+    // see class doc). Trimmed to MAX_HISTORY_MESSAGES_SENT so the request body/token cost don't
+    // grow unbounded over a long session.
+    private final List<ApiService.ChatMessageDto> chatHistory = new ArrayList<>();
+    private static final int MAX_HISTORY_MESSAGES_SENT = 20;
+
+    private String googleId;
+    private String email;
+
+    // Set once the backend reports the guest message cap was hit (ChatResponse.isCapped()) -
+    // blocks further sends client-side too so a fast double-tap can't sneak an extra request in
+    // before the disabled input takes visual effect.
+    private boolean guestCapped = false;
+    // Guards against a second send while one is still in flight (e.g. fast double-tap on send).
+    private boolean isSending = false;
+
+    private ImageView btnSendChat;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,7 +91,14 @@ public class ChatbotActivity extends AppCompatActivity {
         layoutChatMessages = findViewById(R.id.layoutChatMessages);
         scrollChatMessages = findViewById(R.id.scrollChatMessages);
         edtChatInput = findViewById(R.id.edtChatInput);
-        ImageView btnSendChat = findViewById(R.id.btnSendChat);
+        btnSendChat = findViewById(R.id.btnSendChat);
+
+        // Tier is decided purely by sign-in type, same self-reported trust model the rest of the
+        // app already uses (see SessionManager doc) - a Guest session (including "Continue as
+        // Guest") never sends googleId/email, so the backend always treats it as guest-tier.
+        boolean isAuthenticated = SessionManager.getSignInType(this) == SessionManager.SignInType.GOOGLE;
+        googleId = isAuthenticated ? SessionManager.getUserId(this) : null;
+        email = isAuthenticated ? SessionManager.getEmail(this) : null;
 
         findViewById(R.id.btnChatBack).setOnClickListener(v -> finish());
         findViewById(R.id.btnChatMenu).setOnClickListener(v ->
@@ -88,12 +119,12 @@ public class ChatbotActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        chatHandler.removeCallbacksAndMessages(null);
         for (Animator animator : activeAnimators) animator.cancel();
         activeAnimators.clear();
     }
 
     private void sendChatMessage() {
+        if (guestCapped || isSending) return;
         String question = edtChatInput.getText().toString().trim();
         if (question.isEmpty()) return;
 
@@ -101,15 +132,55 @@ public class ChatbotActivity extends AppCompatActivity {
         addUserBubble(question);
         edtChatInput.setText("");
 
-        // Demo reply only: always suggest the first tour from mock data. A "typing..." indicator
-        // shows first so the reply doesn't feel like a hardcoded instant echo.
+        isSending = true;
         View typingRow = addTypingIndicator();
-        chatHandler.postDelayed(() -> {
-            removeTypingIndicator(typingRow);
-            addBotBubble(getString(R.string.chatbot_suggestion_intro));
-            Tour suggestion = MockDataProvider.getMockTours().get(0);
-            addTourSuggestionCard(suggestion);
-        }, 1200);
+
+        List<ApiService.ChatMessageDto> historyToSend = chatHistory.size() > MAX_HISTORY_MESSAGES_SENT
+                ? new ArrayList<>(chatHistory.subList(chatHistory.size() - MAX_HISTORY_MESSAGES_SENT, chatHistory.size()))
+                : new ArrayList<>(chatHistory);
+        ApiService.ChatRequest request = new ApiService.ChatRequest(question, historyToSend, googleId, email);
+
+        ApiService apiService = ApiClient.getClient().create(ApiService.class);
+        apiService.sendChatMessage(request).enqueue(new Callback<ApiService.ChatResponse>() {
+            @Override
+            public void onResponse(Call<ApiService.ChatResponse> call, Response<ApiService.ChatResponse> response) {
+                isSending = false;
+                removeTypingIndicator(typingRow);
+
+                if (!response.isSuccessful() || response.body() == null) {
+                    addBotBubble(getString(R.string.chatbot_error_generic));
+                    return;
+                }
+
+                ApiService.ChatResponse body = response.body();
+                // Recorded regardless of tier/capped state so a re-opened cap message still has
+                // correct context if the backend ever allows a follow-up (e.g. after sign-in).
+                chatHistory.add(new ApiService.ChatMessageDto("user", question));
+                chatHistory.add(new ApiService.ChatMessageDto("assistant", body.getReply()));
+
+                addBotBubble(body.getReply());
+                if (body.getSuggestedTours() != null) {
+                    for (Tour tour : body.getSuggestedTours()) {
+                        addTourSuggestionCard(tour);
+                    }
+                }
+
+                if (body.isCapped()) {
+                    guestCapped = true;
+                    edtChatInput.setEnabled(false);
+                    edtChatInput.setHint(getString(R.string.chatbot_guest_input_hint));
+                    btnSendChat.setEnabled(false);
+                    btnSendChat.setAlpha(0.4f);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ApiService.ChatResponse> call, Throwable t) {
+                isSending = false;
+                removeTypingIndicator(typingRow);
+                addBotBubble(getString(R.string.chatbot_error_generic));
+            }
+        });
     }
 
     /** Quick-reply chips shown only for the empty state (before the user's first message) -

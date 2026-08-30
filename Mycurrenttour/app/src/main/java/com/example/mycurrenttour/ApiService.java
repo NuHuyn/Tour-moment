@@ -53,6 +53,9 @@ public interface ApiService {
     @POST("api/auth/google-login")
     Call<User> googleLogin(@Body User user);
 
+    @POST("api/chat")
+    Call<ChatResponse> sendChatMessage(@Body ChatRequest request);
+
     class UploadResponse {
         @SerializedName("imageUrl")
         private String imageUrl;
@@ -63,5 +66,46 @@ public interface ApiService {
         @SerializedName("userId")
         private String userId;
         public UserCopyRequest(String userId) { this.userId = userId; }
+    }
+
+    /** One turn of chat history sent back to the backend each request - this app has no
+     *  server-side chat session, so the client is the source of truth for prior turns (see
+     *  ChatbotActivity's chatHistory field). */
+    class ChatMessageDto {
+        String role; // "user" or "assistant"
+        String content;
+        public ChatMessageDto(String role, String content) {
+            this.role = role;
+            this.content = content;
+        }
+    }
+
+    class ChatRequest {
+        String message;
+        List<ChatMessageDto> history;
+        // Non-null/non-empty only for a real Google session (see SessionManager.SignInType) -
+        // its presence, not its verification, is what the backend uses to grant the
+        // authenticated tier (no message cap) for this phase; see feasibility_report.md §1.5.
+        @SerializedName("googleId")
+        private String googleId;
+        @SerializedName("email")
+        private String email;
+
+        public ChatRequest(String message, List<ChatMessageDto> history, String googleId, String email) {
+            this.message = message;
+            this.history = history;
+            this.googleId = googleId;
+            this.email = email;
+        }
+    }
+
+    class ChatResponse {
+        private String reply;
+        private List<Tour> suggestedTours;
+        private boolean capped;
+
+        public String getReply() { return reply; }
+        public List<Tour> getSuggestedTours() { return suggestedTours; }
+        public boolean isCapped() { return capped; }
     }
 }
