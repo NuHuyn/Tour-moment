@@ -18,6 +18,7 @@
 const mongoose = require("mongoose");
 const Tour = require("../models/Tour");
 const User = require("../models/User");
+const { redactTourWaypoints } = require("./waypointVisibility");
 
 const DEFAULT_LIMIT = 5;
 const MAX_LIMIT = 10;
@@ -64,7 +65,12 @@ async function toClientTour(tourDoc) {
     endDate: tourDoc.endDate,
     isShared: tourDoc.isShared,
     author: await attachAuthor(tourDoc.authorId),
-    waypoints: (tourDoc.waypoints || []).map((wp) => ({
+    // Fail-closed: the chat tools have no per-device identity threaded through them (see
+    // waypointVisibility.js docstring), so every locked-and-not-explicitly-unlocked waypoint is
+    // always redacted here, same as an anonymous getPublicTours call with no deviceId - a locked
+    // waypoint real name/coordinates/photos must never reach the chatbot response either,
+    // otherwise it becomes a second, unprotected path to the same data getPublicTours redacts.
+    waypoints: redactTourWaypoints(tourDoc.waypoints, tourDoc._id, null).map((wp) => ({
       locationName: wp.locationName,
       note: wp.note,
       price: wp.price,
@@ -167,7 +173,7 @@ const toolSchemas = [
     function: {
       name: "search_tours_by_location",
       description:
-        "Find shared Tour-moment tours whose title, description, or waypoints mention a given place " +
+        "Find shared JourneyLog tours whose title, description, or waypoints mention a given place " +
         "(city, province, or landmark). Use this whenever the user names a place, e.g. 'Hà Nội', 'Đà Lạt', 'Ha Long Bay'.",
       parameters: {
         type: "object",
@@ -187,7 +193,7 @@ const toolSchemas = [
     function: {
       name: "search_tours_by_theme",
       description:
-        "Find shared Tour-moment tours matching a travel theme or activity (e.g. 'biển' for beach, 'núi' for " +
+        "Find shared JourneyLog tours matching a travel theme or activity (e.g. 'biển' for beach, 'núi' for " +
         "mountain, 'văn hóa' for culture, 'ẩm thực' for food) when the user hasn't named a specific place.",
       parameters: {
         type: "object",

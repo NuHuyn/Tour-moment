@@ -9,7 +9,10 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.text.Layout;
+import android.text.format.DateUtils;
 import android.media.MediaPlayer;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -18,6 +21,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.viewpager2.widget.ViewPager2;
@@ -34,6 +38,11 @@ import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.TimeZone;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * Tour Detail - editorial-style overview (Style B): full-bleed photo carousel, large bold title,
@@ -59,14 +68,20 @@ public class TourDetailActivity extends AppCompatActivity {
     private ImageButton btnPlaySlideshow;
 
     private TextView txtTitleDetail, txtProviderDetail, txtRatingDetail, txtReviewCountDetail;
-    private TextView txtIdDetail, txtDurationDetail, txtSeatsDetail, txtStartDetail, txtEndDetail;
+    private TextView txtIdDetail, txtDurationDetail, txtStartDetail, txtEndDetail;
     private TextView txtDescription, txtToggleDescription;
     private LinearLayout layoutDestinationChips;
+
+    // Reviews section
+    private TextView txtReviewsSectionRating, txtReviewsSectionCount, txtReviewsEmpty;
+    private LinearLayout btnWriteReview, layoutReviewsList;
+    private List<Review> currentReviews = new ArrayList<>();
 
     private Tour tour;
     private final List<String> photos = new ArrayList<>();
     private final Handler sliderHandler = new Handler(Looper.getMainLooper());
     private MediaPlayer mediaPlayer;
+    private static final String TAG = "TourDetailActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,12 +97,16 @@ public class TourDetailActivity extends AppCompatActivity {
             return;
         }
 
+        prefetchImages(tour);
         preparePhotos(tour);
         setupHeroCarousel();
         setupHeroScrollBlur();
         displayTourData(tour);
         setupDestinationChips(tour);
         setupDescription(tour.getDescription());
+        loadReviews();
+
+        btnWriteReview.setOnClickListener(v -> onWriteReviewClick());
 
         btnPlaySlideshow.setOnClickListener(v -> startInternalSlideshow());
         findViewById(R.id.btnBackDetail).setOnClickListener(v -> finish());
@@ -121,12 +140,17 @@ public class TourDetailActivity extends AppCompatActivity {
         txtReviewCountDetail = findViewById(R.id.txtReviewCountDetail);
         txtIdDetail = findViewById(R.id.txtIdDetail);
         txtDurationDetail = findViewById(R.id.txtDurationDetail);
-        txtSeatsDetail = findViewById(R.id.txtSeatsDetail);
         txtStartDetail = findViewById(R.id.txtStartDetail);
         txtEndDetail = findViewById(R.id.txtEndDetail);
         txtDescription = findViewById(R.id.txtDescription);
         txtToggleDescription = findViewById(R.id.txtToggleDescription);
         layoutDestinationChips = findViewById(R.id.layoutDestinationChips);
+
+        txtReviewsSectionRating = findViewById(R.id.txtReviewsSectionRating);
+        txtReviewsSectionCount = findViewById(R.id.txtReviewsSectionCount);
+        txtReviewsEmpty = findViewById(R.id.txtReviewsEmpty);
+        btnWriteReview = findViewById(R.id.btnWriteReview);
+        layoutReviewsList = findViewById(R.id.layoutReviewsList);
     }
 
     private void toggleFavorite() {
@@ -135,14 +159,36 @@ public class TourDetailActivity extends AppCompatActivity {
     }
 
     private void shareTour() {
-        // "TourMoment" is the product's brand name, not app_name (the Android app label) -
+        // "JourneyLog" is the product's brand name, not app_name (the Android app label) -
         // deliberately left unlocalized, same as it already was.
-        String title = tour.getTitle() != null ? tour.getTitle() : "TourMoment";
+        String title = tour.getTitle() != null ? tour.getTitle() : "JourneyLog";
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.setType("text/plain");
         shareIntent.putExtra(Intent.EXTRA_SUBJECT, title);
         shareIntent.putExtra(Intent.EXTRA_TEXT, title + " - " + (tour.getDescription() != null ? tour.getDescription() : getString(R.string.share_text_fallback)));
         startActivity(Intent.createChooser(shareIntent, getString(R.string.share_via)));
+    }
+
+    /** Kicks off Picasso's cache-warming .fetch() (no target ImageView, doesn't touch layout) for
+     *  the cover + first few waypoint photos the instant the Tour data is available - before
+     *  setupHeroCarousel()/the waypoint RecyclerView even inflate their views. By the time those
+     *  actually call .load(...).into(imageView), the bytes are already downloading (or done), so
+     *  the real .into() call resolves from cache instead of starting a fresh fetch at bind time.
+     *  Doesn't change what eventually renders, just moves the network request earlier. */
+    private void prefetchImages(Tour tour) {
+        if (tour.getImageUrl() != null && !tour.getImageUrl().isEmpty()) {
+            Picasso.get().load(tour.getImageUrl()).fetch();
+        }
+        if (tour.getWaypoints() != null) {
+            int count = 0;
+            for (Tour.Waypoint wp : tour.getWaypoints()) {
+                if (count >= 4) break; // first screenful is enough - no point prefetching the whole trip up front
+                if (wp.getPhotos() != null && !wp.getPhotos().isEmpty() && !wp.getPhotos().get(0).isEmpty()) {
+                    Picasso.get().load(wp.getPhotos().get(0)).fetch();
+                    count++;
+                }
+            }
+        }
     }
 
     private void preparePhotos(Tour tour) {
@@ -275,22 +321,11 @@ public class TourDetailActivity extends AppCompatActivity {
         txtStartDetail.setText(formatDate(tour.getStartDate()));
         txtEndDetail.setText(formatDate(tour.getEndDate()));
 
-        // Rating/review-count/seats-left aren't backend fields yet (Tour has no such properties) -
-        // deterministic per-tour placeholder values (seeded off the tour id) so a given tour
-        // always shows the same numbers instead of them looking randomly generated on every open.
-        // TODO: replace with real fields once the backend exposes them.
-        int seed = tour.getId() != null ? Math.abs(tour.getId().hashCode()) : 0;
-        double rating = 4.5 + (seed % 5) / 10.0;
-        int reviewCount = 80 + seed % 150;
-        int seatsLeft = 5 + seed % 20;
-
-        NumberFormat ratingFormat = NumberFormat.getNumberInstance(Locale.getDefault());
-        ratingFormat.setMinimumFractionDigits(1);
-        ratingFormat.setMaximumFractionDigits(1);
-        txtRatingDetail.setText(ratingFormat.format(rating));
-
-        txtReviewCountDetail.setText(getResources().getQuantityString(R.plurals.review_count, reviewCount, reviewCount));
-        txtSeatsDetail.setText(NumberFormat.getIntegerInstance(Locale.getDefault()).format(seatsLeft));
+        // Real rating/review-count now come from GET /api/tours/{id}/reviews (see loadReviews()),
+        // which is aggregated live from the Review collection - no more hash-seeded placeholder
+        // numbers. Both this row and the reviews section header show "…" until that call resolves.
+        txtRatingDetail.setText(R.string.not_available);
+        txtReviewCountDetail.setText(R.string.review_count_placeholder);
     }
 
     /** "3N2Đ" (vi) / "3D2N" (en) from startDate/endDate, same nights+1/nights convention as
@@ -368,6 +403,235 @@ public class TourDetailActivity extends AppCompatActivity {
                 txtDescription.setMaxLines(Integer.MAX_VALUE);
                 txtDescription.setEllipsize(null);
                 txtToggleDescription.setText(R.string.show_less_toggle);
+            }
+        });
+    }
+
+    // ================= Reviews =================
+
+    /** Fetches GET /api/tours/{id}/reviews and refreshes both the top rating row (txtRatingDetail/
+     *  txtReviewCountDetail) and the reviews section (header + list) from the same response, so
+     *  the two numbers on screen never disagree. */
+    private void loadReviews() {
+        if (tour.getId() == null) return;
+        ApiService api = ApiClient.getClient().create(ApiService.class);
+        api.getTourReviews(tour.getId()).enqueue(new Callback<ApiService.ReviewsResponse>() {
+            @Override
+            public void onResponse(Call<ApiService.ReviewsResponse> call, Response<ApiService.ReviewsResponse> response) {
+                if (!response.isSuccessful() || response.body() == null) {
+                    Log.e(TAG, "getTourReviews failed: HTTP " + response.code());
+                    Toast.makeText(TourDetailActivity.this, R.string.reviews_load_failed, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                ApiService.ReviewsResponse body = response.body();
+                currentReviews = body.getReviews() != null ? body.getReviews() : new ArrayList<>();
+                applyRatingSummary(body.getAvgRating(), body.getReviewCount());
+                renderReviews();
+            }
+
+            @Override
+            public void onFailure(Call<ApiService.ReviewsResponse> call, Throwable t) {
+                Log.e(TAG, "getTourReviews call failed", t);
+                Toast.makeText(TourDetailActivity.this, R.string.reviews_load_failed, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void applyRatingSummary(double avgRating, int reviewCount) {
+        String ratingText;
+        if (reviewCount > 0) {
+            NumberFormat ratingFormat = NumberFormat.getNumberInstance(Locale.getDefault());
+            ratingFormat.setMinimumFractionDigits(1);
+            ratingFormat.setMaximumFractionDigits(1);
+            ratingText = ratingFormat.format(avgRating);
+        } else {
+            ratingText = getString(R.string.not_available);
+        }
+        String countText = getResources().getQuantityString(R.plurals.review_count, reviewCount, reviewCount);
+
+        txtRatingDetail.setText(ratingText);
+        txtReviewCountDetail.setText(countText);
+        txtReviewsSectionRating.setText(ratingText);
+        txtReviewsSectionCount.setText(countText);
+    }
+
+    private void renderReviews() {
+        layoutReviewsList.removeAllViews();
+        txtReviewsEmpty.setVisibility(currentReviews.isEmpty() ? View.VISIBLE : View.GONE);
+
+        String myUserId = SessionManager.getUserId(this);
+        for (Review review : currentReviews) {
+            layoutReviewsList.addView(buildReviewItemView(review, myUserId));
+        }
+    }
+
+    private View buildReviewItemView(Review review, String myUserId) {
+        View itemView = LayoutInflater.from(this).inflate(R.layout.item_review, layoutReviewsList, false);
+
+        ImageView imgAvatar = itemView.findViewById(R.id.imgReviewerAvatar);
+        TextView txtName = itemView.findViewById(R.id.txtReviewerName);
+        LinearLayout layoutStars = itemView.findViewById(R.id.layoutReviewStars);
+        TextView txtDate = itemView.findViewById(R.id.txtReviewDate);
+        TextView txtComment = itemView.findViewById(R.id.txtReviewComment);
+        TextView txtDelete = itemView.findViewById(R.id.txtDeleteReview);
+
+        String name = review.getUser() != null && review.getUser().getDisplayName() != null
+                ? review.getUser().getDisplayName() : getString(R.string.default_reviewer_name);
+        txtName.setText(name);
+
+        String photoUrl = review.getUser() != null ? review.getUser().getPhotoUrl() : null;
+        if (photoUrl != null && !photoUrl.isEmpty()) {
+            Picasso.get().load(photoUrl)
+                    .placeholder(R.drawable.ic_user_placeholder)
+                    .error(R.drawable.ic_user_placeholder)
+                    .into(imgAvatar);
+        } else {
+            imgAvatar.setImageResource(R.drawable.ic_user_placeholder);
+        }
+
+        layoutStars.removeAllViews();
+        int starSizePx = dp(12);
+        for (int i = 1; i <= 5; i++) {
+            ImageView star = new ImageView(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(starSizePx, starSizePx);
+            if (i > 1) lp.setMarginStart(dp(1));
+            star.setLayoutParams(lp);
+            star.setImageResource(i <= review.getRating() ? R.drawable.ic_star_filled : R.drawable.ic_star_gray);
+            layoutStars.addView(star);
+        }
+
+        txtDate.setText(formatRelativeDate(review.getCreatedAt()));
+
+        String comment = review.getComment();
+        if (comment != null && !comment.trim().isEmpty()) {
+            txtComment.setText(comment);
+            txtComment.setVisibility(View.VISIBLE);
+        } else {
+            txtComment.setVisibility(View.GONE);
+        }
+
+        boolean isOwnReview = myUserId != null && myUserId.equals(review.getUserId());
+        txtDelete.setVisibility(isOwnReview ? View.VISIBLE : View.GONE);
+        if (isOwnReview) {
+            txtDelete.setOnClickListener(v -> confirmDeleteReview());
+        }
+
+        return itemView;
+    }
+
+    /** ISO-8601 (Mongoose timestamps, e.g. "2026-09-10T12:34:56.789Z") -> localized relative
+     *  string ("2 ngày trước" / "2 days ago") via the same Locale.getDefault()-driven convention
+     *  formatDate() already uses for absolute dates elsewhere on this screen. */
+    private String formatRelativeDate(String isoDate) {
+        if (isoDate == null || isoDate.isEmpty()) return "";
+        try {
+            SimpleDateFormat in = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+            in.setTimeZone(TimeZone.getTimeZone("UTC"));
+            Date parsed = in.parse(isoDate);
+            return DateUtils.getRelativeTimeSpanString(parsed.getTime(), System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /** Guests (SessionManager.SignInType.GUEST) get a sign-in-required prompt instead - there is
+     *  no existing "sign in mid-flow and return to where you were" mechanism anywhere else in this
+     *  app (LoginActivity always finishes into a fresh HomeActivity, discarding the back stack),
+     *  so this is a minimal stopgap: tapping "Đăng nhập" takes the user to LoginActivity/Home, not
+     *  back to this exact screen. Flagged as a real UX gap worth a dedicated fix later. */
+    private void onWriteReviewClick() {
+        if (SessionManager.getSignInType(this) != SessionManager.SignInType.GOOGLE) {
+            showSignInRequiredDialog();
+            return;
+        }
+
+        String myUserId = SessionManager.getUserId(this);
+        Review existing = null;
+        for (Review r : currentReviews) {
+            if (myUserId != null && myUserId.equals(r.getUserId())) {
+                existing = r;
+                break;
+            }
+        }
+
+        boolean isEdit = existing != null;
+        ReviewFormBottomSheet sheet = ReviewFormBottomSheet.newInstance(
+                isEdit ? existing.getRating() : 0,
+                isEdit ? existing.getComment() : "");
+        sheet.setListener((rating, comment) -> submitOrUpdateReview(isEdit, rating, comment));
+        sheet.show(getSupportFragmentManager(), "review_form");
+    }
+
+    private void showSignInRequiredDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_signin_required_title)
+                .setMessage(R.string.dialog_signin_required_message)
+                .setPositiveButton(R.string.action_sign_in, (d, w) ->
+                        startActivity(new Intent(this, LoginActivity.class)))
+                .setNegativeButton(R.string.dialog_cancel, null)
+                .show();
+    }
+
+    private void submitOrUpdateReview(boolean isEdit, int rating, String comment) {
+        String myUserId = SessionManager.getUserId(this);
+        if (myUserId == null || tour.getId() == null) return;
+
+        ApiService api = ApiClient.getClient().create(ApiService.class);
+        ApiService.ReviewRequest body = new ApiService.ReviewRequest(myUserId, rating, comment);
+        Call<Review> call = isEdit ? api.updateReview(tour.getId(), body) : api.submitReview(tour.getId(), body);
+
+        call.enqueue(new Callback<Review>() {
+            @Override
+            public void onResponse(Call<Review> call, Response<Review> response) {
+                if (!response.isSuccessful()) {
+                    Log.e(TAG, (isEdit ? "updateReview" : "submitReview") + " failed: HTTP " + response.code());
+                    Toast.makeText(TourDetailActivity.this, R.string.review_submit_failed, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Toast.makeText(TourDetailActivity.this,
+                        isEdit ? R.string.review_update_success : R.string.review_submit_success,
+                        Toast.LENGTH_SHORT).show();
+                loadReviews();
+            }
+
+            @Override
+            public void onFailure(Call<Review> call, Throwable t) {
+                Log.e(TAG, (isEdit ? "updateReview" : "submitReview") + " call failed", t);
+                Toast.makeText(TourDetailActivity.this, R.string.review_submit_failed, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void confirmDeleteReview() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.confirm_delete_review_title)
+                .setMessage(R.string.confirm_delete_review_message)
+                .setPositiveButton(R.string.dialog_yes, (d, w) -> deleteOwnReview())
+                .setNegativeButton(R.string.dialog_no, null)
+                .show();
+    }
+
+    private void deleteOwnReview() {
+        String myUserId = SessionManager.getUserId(this);
+        if (myUserId == null || tour.getId() == null) return;
+
+        ApiService api = ApiClient.getClient().create(ApiService.class);
+        api.deleteReview(tour.getId(), new ApiService.UserIdRequest(myUserId)).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (!response.isSuccessful()) {
+                    Log.e(TAG, "deleteReview failed: HTTP " + response.code());
+                    Toast.makeText(TourDetailActivity.this, R.string.review_submit_failed, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Toast.makeText(TourDetailActivity.this, R.string.review_delete_success, Toast.LENGTH_SHORT).show();
+                loadReviews();
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Log.e(TAG, "deleteReview call failed", t);
+                Toast.makeText(TourDetailActivity.this, R.string.review_submit_failed, Toast.LENGTH_SHORT).show();
             }
         });
     }

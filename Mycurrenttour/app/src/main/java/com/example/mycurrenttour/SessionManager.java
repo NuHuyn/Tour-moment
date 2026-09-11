@@ -34,6 +34,12 @@ public class SessionManager {
     private static final String KEY_EMAIL = "email";
     private static final String KEY_PHOTO_URL = "photo_url";
 
+    // GOOGLE covers any real (non-Guest) Firebase-authenticated session as of the Firebase Auth
+    // migration - Email/Password sign-in also lands here via saveGoogleSession, not just Google
+    // Sign-In. Kept as one name/value (rather than renamed to e.g. AUTHENTICATED) to avoid
+    // rippling the rename into every place that already reads it (DiscoveryFragment,
+    // TourDetailActivity's review-gating, ProfileFragment, ...) - what every caller actually
+    // means by it is "identified account with a backend User row", which is still accurate.
     public enum SignInType { GUEST, GOOGLE }
 
     private SessionManager() {}

@@ -38,6 +38,23 @@
         <item name="cornerSizeBottomRight">24dp</item>
     </style>
 
+    <!-- Login screen's email/password TextInputLayouts (activity_login.xml) - filled white pill
+         box (same rounding as the screen's other pill buttons) so the form reads clearly against
+         the dark photo background, dark text/hint on white rather than the app's usual
+         green-bordered outline box (that style assumes a white screen background, which this
+         screen doesn't have). -->
+    <style name="LoginInputBox" parent="Widget.Material3.TextInputLayout.FilledBox">
+        <item name="boxBackgroundColor">@color/white</item>
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+        <item name="hintTextColor">@color/green_dark_primary</item>
+        <item name="android:textColorHint">#757575</item>
+        <item name="boxStrokeWidth">0dp</item>
+        <item name="boxStrokeWidthFocused">0dp</item>
+    </style>
+
     <!-- Bottom nav's active-tab indicator, made fully transparent - the redesigned floating
          capsule nav (activity_home.xml) shows active state purely via the icon/label turning
          green (bottom_nav_icon_color.xml / bottom_nav_item_color.xml) plus HomeActivity's

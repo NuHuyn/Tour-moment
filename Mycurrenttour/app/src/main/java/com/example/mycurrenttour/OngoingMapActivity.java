@@ -1,9 +1,9 @@
 package com.example.mycurrenttour;
 
+import android.Manifest;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
@@ -19,6 +19,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.ViewCompat;
@@ -27,10 +29,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.button.MaterialButton;
+import com.squareup.picasso.Picasso;
 
-import org.osmdroid.bonuspack.routing.OSRMRoadManager;
-import org.osmdroid.bonuspack.routing.Road;
-import org.osmdroid.bonuspack.routing.RoadManager;
 import org.osmdroid.config.Configuration;
 import org.osmdroid.tileprovider.tilesource.XYTileSource;
 import org.osmdroid.util.GeoPoint;
@@ -38,12 +38,11 @@ import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polyline;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 
 public class OngoingMapActivity extends AppCompatActivity {
 
@@ -53,26 +52,48 @@ public class OngoingMapActivity extends AppCompatActivity {
     private RouteStopAdapter adapter;
     private LinearLayout layoutStopDots;
     private TextView txtRouteProgressLabel;
-    private List<GeoPoint> routePoints = new ArrayList<>();
     private View frameUnlockFull;
     private MaterialButton btnUnlockFull;
     private TextView badgeUnlockDiscount;
     private BottomSheetBehavior<View> sheetBehavior;
 
-    // Fixed "My Location" start point used by both initRouteOnMap() (full stop list/markers) and
-    // buildUnlockedRoutePoints() (paywall-aware route line) - kept as one field so both stay in
-    // sync instead of two copies of the same literal coordinate drifting apart.
-    private final GeoPoint myLocationStart = new GeoPoint(10.870587770354202, 106.80209416657385);
-    // Outline color of the main dashed route line, so refreshLockedState() can find-and-remove
-    // just that overlay (not the lighter-green per-step highlight from drawStepRoad) before
-    // redrawing it with the current unlock state.
-    private static final int MAIN_ROUTE_COLOR = Color.parseColor("#1B5E20");
+    // On-demand route info pill (Feature 1) - hidden until a route is actually drawn.
+    private View cardRouteInfo;
+    private TextView txtRouteDistance, txtRouteDuration;
 
-    // Demo waypoint-lock feature (chưa gắn cổng thanh toán thật, chỉ mô phỏng UI cho báo cáo đồ án).
-    // Trạng thái khóa lấy từ WaypointLockManager (persist qua SharedPreferences, dùng chung với
-    // TourDetailActivity/Discovery) chứ không tự tính lại từ đầu mỗi lần mở màn nữa.
-    // TODO: thay bằng logic khóa dựa trên thanh toán thật khi có backend.
-    private Set<Integer> lockedWaypoints = new HashSet<>();
+    /** One GeoPoint per tour.getWaypoints() entry, 1:1 by index - used for marker placement and
+     *  camera centering. No longer includes a leading "my location" entry (that point is now
+     *  dynamic/asynchronous, fetched fresh only when the user actually taps a stop - see
+     *  Feature 1's "does NOT auto-trigger on load" requirement). */
+    private final List<GeoPoint> waypointPoints = new ArrayList<>();
+    private final List<Marker> stopMarkers = new ArrayList<>();
+
+    // Live user location, fetched on-demand (never auto-fetched on screen load) - null until the
+    // first successful fix.
+    private GeoPoint myLocation;
+    private Marker myLocationMarker;
+
+    // The single on-demand route currently drawn, if any - "per-waypoint, never more than one
+    // route visible at once" (Feature 1.4): tapping a different unlocked stop clears this first.
+    private Polyline activeRoutePolyline;
+    private int activeRouteTargetIndex = -1;
+    private static final int ACTIVE_ROUTE_COLOR = Color.parseColor("#1B5E20");
+
+    // Permission was requested from a specific stop tap - resumed here once the result comes back,
+    // so "tap stop -> grant permission" ends in a drawn route instead of the user having to tap
+    // again.
+    private int pendingNavigationTargetIndex = -1;
+    private final ActivityResultLauncher<String> locationPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                if (granted && pendingNavigationTargetIndex != -1) {
+                    int target = pendingNavigationTargetIndex;
+                    pendingNavigationTargetIndex = -1;
+                    resolveLocationThenRoute(target);
+                } else {
+                    pendingNavigationTargetIndex = -1;
+                    Toast.makeText(this, "Cần quyền truy cập vị trí để chỉ đường tới điểm này.", Toast.LENGTH_LONG).show();
+                }
+            });
 
     // Mapbox raster tiles - replaces osmdroid's default TileSourceFactory.MAPNIK, which points
     // straight at tile.openstreetmap.org. That server is OSMF's volunteer-run demo endpoint and is
@@ -95,6 +116,7 @@ public class OngoingMapActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Configuration.getInstance().setUserAgentValue(getPackageName());
+        configureTileCache();
         setContentView(R.layout.activity_ongoing_map);
 
         tour = (Tour) getIntent().getSerializableExtra("tour_item");
@@ -104,11 +126,13 @@ public class OngoingMapActivity extends AppCompatActivity {
             return;
         }
 
+        prefetchStopPhotos(tour);
         initViews();
         setupBottomSheet();
         setupMap();
         setupStopCards();
         setupDots();
+        refreshLockedState();
 
         // The floating back arrow over the map is the only back control now - the bottom action
         // row's redundant outlined "Back" button was removed (Unlock Now is the sole action left).
@@ -116,8 +140,26 @@ public class OngoingMapActivity extends AppCompatActivity {
         findViewById(R.id.btnRecenter).setOnClickListener(v -> recenterMap());
         findViewById(R.id.btnZoomIn).setOnClickListener(v -> map.getController().zoomIn());
         findViewById(R.id.btnZoomOut).setOnClickListener(v -> map.getController().zoomOut());
+        findViewById(R.id.btnClearRoute).setOnClickListener(v -> clearActiveRoute());
         // Demo waypoint-lock: nút "Unlock Now" mở hết toàn bộ waypoint còn khóa (full trip, giảm 25%).
         btnUnlockFull.setOnClickListener(v -> showFullUnlockDialog());
+    }
+
+    /** Cache-warming prefetch (no target view) for the first few stop cards' photos, called
+     *  before setupStopCards() ever inflates the RecyclerView - same rationale as
+     *  TourDetailActivity#prefetchImages. Locked waypoints are skipped (RouteStopAdapter never
+     *  loads their real photo anyway, always the blurred generic placeholder). */
+    private void prefetchStopPhotos(Tour tour) {
+        if (tour.getWaypoints() == null) return;
+        int count = 0;
+        for (Tour.Waypoint wp : tour.getWaypoints()) {
+            if (count >= 4) break;
+            if (wp.isLocked()) continue;
+            if (wp.getPhotos() != null && !wp.getPhotos().isEmpty() && !wp.getPhotos().get(0).isEmpty()) {
+                Picasso.get().load(wp.getPhotos().get(0)).fetch();
+                count++;
+            }
+        }
     }
 
     private void initViews() {
@@ -128,6 +170,9 @@ public class OngoingMapActivity extends AppCompatActivity {
         frameUnlockFull = findViewById(R.id.frameUnlockFull);
         btnUnlockFull = findViewById(R.id.btnUnlockFull);
         badgeUnlockDiscount = findViewById(R.id.badgeUnlockDiscount);
+        cardRouteInfo = findViewById(R.id.cardRouteInfo);
+        txtRouteDistance = findViewById(R.id.txtRouteDistance);
+        txtRouteDuration = findViewById(R.id.txtRouteDuration);
         styleDiscountBadge(badgeUnlockDiscount);
     }
 
@@ -166,13 +211,51 @@ public class OngoingMapActivity extends AppCompatActivity {
                 Collections.singletonList(new Rect(0, 0, sheet.getWidth(), sheet.getHeight()))));
     }
 
+    /**
+     * Tile caching/throughput tuning - must run before the MapView is created (osmdroid only
+     * picks up base-path/tile-cache-dir changes at MapView construction time).
+     *
+     * Root-caused two things here, not just guessed:
+     * 1. This app never called Configuration.getInstance().load(context, prefs) or set an
+     *    explicit base path, so osmdroid resolved its tile cache directory via the no-Context
+     *    overload of getOsmdroidBasePath() - which osmdroid's own docs flag as unreliable on
+     *    API 29+ scoped storage. Passing this Activity's real external-files dir guarantees a
+     *    directory that's always writable and actually persists between sessions, so previously
+     *    seen areas stop re-downloading every time instead of using the disk cache osmdroid
+     *    already has on by default (600MB, unrelated to this bug).
+     * 2. osmdroid's default tileDownloadThreads is 2 - a courtesy limit for OSM's shared,
+     *    volunteer-run tile servers (see OSM's tile usage policy), not a limit this app's own
+     *    paid Mapbox account needs to respect. That's the direct cause of tiles visibly trickling
+     *    in one at a time instead of a screenful arriving together.
+     */
+    private void configureTileCache() {
+        File externalDir = getExternalFilesDir(null);
+        File baseDir = new File(externalDir != null ? externalDir : getFilesDir(), "osmdroid");
+        Configuration.getInstance().setOsmdroidBasePath(baseDir);
+        Configuration.getInstance().setOsmdroidTileCache(new File(baseDir, "tiles"));
+
+        Configuration.getInstance().setTileDownloadThreads((short) 6);
+        Configuration.getInstance().setTileDownloadMaxQueueSize((short) 40);
+        // More tiles kept decoded in memory (default 9) - fewer disk re-reads/re-decodes when
+        // panning back over recently-seen tiles.
+        Configuration.getInstance().setCacheMapTileCount((short) 18);
+        // Trust the disk cache for a full week regardless of whatever cache headers Mapbox's
+        // raster tile endpoint sends back, so a previously-visited area never re-fetches over
+        // the network at all within that window.
+        Configuration.getInstance().setExpirationOverrideDuration(7L * 24 * 60 * 60 * 1000L);
+    }
+
     private void setupMap() {
         map.setTileSource(MAPBOX_TILE_SOURCE);
         map.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
         map.setMultiTouchControls(true);
         map.getController().setZoom(14.0);
 
-        initRouteOnMap();
+        // Just places markers - no route line, no ETA, nothing drawn until the user explicitly
+        // taps a specific waypoint (Feature 1.1). Previously this auto-drew a full multi-stop
+        // route through every unlocked waypoint on load; that's gone in favor of the on-demand,
+        // single-destination navigation below.
+        placeMarkers();
     }
 
     private void setupStopCards() {
@@ -182,11 +265,7 @@ public class OngoingMapActivity extends AppCompatActivity {
         adapter = new RouteStopAdapter(tour.getWaypoints(), new RouteStopAdapter.OnStopClickListener() {
             @Override
             public void onStopClick(int position) {
-                // Unlocked card tapped - center the map on that stop and highlight the leg leading to it.
-                if (position + 1 < routePoints.size()) {
-                    if (position > 0) drawStepRoad(position, position + 1);
-                    map.getController().animateTo(routePoints.get(position + 1));
-                }
+                navigateToWaypoint(position);
             }
 
             @Override
@@ -202,8 +281,6 @@ public class OngoingMapActivity extends AppCompatActivity {
                 updateActiveDot(currentCenteredPosition());
             }
         });
-
-        refreshLockedState();
     }
 
     /**
@@ -259,67 +336,121 @@ public class OngoingMapActivity extends AppCompatActivity {
     }
 
     private void recenterMap() {
-        if (!routePoints.isEmpty()) {
-            map.getController().animateTo(routePoints.get(0));
+        if (myLocation != null) {
+            map.getController().animateTo(myLocation);
+            map.getController().setZoom(14.0);
+        } else if (!waypointPoints.isEmpty()) {
+            map.getController().animateTo(waypointPoints.get(0));
             map.getController().setZoom(14.0);
         }
     }
 
-    /** TODO: demo waypoint-lock - đọc lại trạng thái khóa đã lưu (persist theo tourId) và refresh UI. */
+    /** Recomputes lock/progress state straight from the tour data currently in memory (server is
+     *  the source of truth for isLocked() - see Tour.Waypoint) and redraws markers accordingly.
+     *  Called once on load and again after refetchTourAndRefresh() following a successful unlock. */
     private void refreshLockedState() {
         if (tour == null || tour.getWaypoints() == null) return;
-        lockedWaypoints = WaypointLockManager.getLockedPositions(this, tour.getId(), tour.getWaypoints().size());
-        if (adapter != null) adapter.setLockedPositions(lockedWaypoints);
+        if (adapter != null) adapter.updateWaypoints(tour.getWaypoints());
         updateProgressLabel();
-        redrawMarkers();
-        redrawMainRoute();
+        placeMarkers();
 
-        // Nút "Unlock Now" + badge "-25%" chỉ hiện khi còn step khóa; hết khóa thì ẩn luôn cả 2 (đã unlock hết, không còn gì để bán).
-        boolean hasLocked = !lockedWaypoints.isEmpty();
-        frameUnlockFull.setVisibility(hasLocked ? View.VISIBLE : View.GONE);
-        btnUnlockFull.setEnabled(hasLocked);
+        int lockedCount = 0;
+        List<Tour.Waypoint> lockedWaypoints = new ArrayList<>();
+        for (Tour.Waypoint wp : tour.getWaypoints()) {
+            if (wp.isLocked()) { lockedCount++; lockedWaypoints.add(wp); }
+        }
+        // Nút "Unlock Now" + badge "-25%" chỉ hiện khi còn step khóa; hết khóa thì ẩn luôn cả 2.
+        frameUnlockFull.setVisibility(lockedCount > 0 ? View.VISIBLE : View.GONE);
+        btnUnlockFull.setEnabled(lockedCount > 0);
     }
 
     /** "Bạn đang ở điểm X/Y" - X = số điểm đã mở, Y = tổng số điểm. */
     private void updateProgressLabel() {
         if (tour.getWaypoints() == null || txtRouteProgressLabel == null) return;
         int total = tour.getWaypoints().size();
-        int unlocked = total - lockedWaypoints.size();
+        int locked = 0;
+        for (Tour.Waypoint wp : tour.getWaypoints()) if (wp.isLocked()) locked++;
+        int unlocked = total - locked;
         txtRouteProgressLabel.setText(String.format(Locale.getDefault(), "Bạn đang ở điểm %d/%d", unlocked, total));
     }
 
     /**
-     * TODO: demo waypoint-lock - dialog thanh toán giả lập (chưa gọi API thanh toán thật, không validate gì).
-     * Mở đúng waypoint tại vị trí đã bấm icon ổ khóa, giá cố định 2.000đ/step.
+     * Demo paywall dialog (chưa gắn cổng thanh toán thật, không validate gì) - "Pay" calls the
+     * real server-side unlock endpoint though, so the record actually persists per-device (see
+     * WaypointLockManager). Amount shown is that waypoint's real price from the server, not a
+     * hardcoded constant.
      */
     private void showStepUnlockDialog(int position) {
         if (tour == null || tour.getWaypoints() == null) return;
-        int price = WaypointLockManager.stepPriceVnd();
+        Tour.Waypoint wp = tour.getWaypoints().get(position);
+        if (!wp.isLocked()) return; // stale tap after it was already unlocked elsewhere
+        int price = wp.getPrice();
 
-        showPayDialog("Pay " + price + " vnd to unlock", () -> {
-            WaypointLockManager.unlockWaypoint(this, tour.getId(), position);
-            refreshLockedState();
-            Toast.makeText(this, "Payment successful! Step " + (position + 1) + " unlocked.", Toast.LENGTH_SHORT).show();
-        });
+        showPayDialog("Pay " + price + " vnd to unlock", () ->
+                WaypointLockManager.unlockWaypoint(this, tour.getId(), position, new WaypointLockManager.UnlockCallback() {
+                    @Override
+                    public void onSuccess() {
+                        Toast.makeText(OngoingMapActivity.this,
+                                "Payment successful! Step " + (position + 1) + " unlocked.", Toast.LENGTH_SHORT).show();
+                        refetchTourAndRefresh();
+                    }
+
+                    @Override
+                    public void onFailure(String message) {
+                        Toast.makeText(OngoingMapActivity.this, message, Toast.LENGTH_LONG).show();
+                    }
+                }));
     }
 
-    /**
-     * TODO: demo waypoint-lock - dialog thanh toán giả lập (chưa gọi API thanh toán thật, không validate gì).
-     * Mở hết toàn bộ waypoint còn khóa cùng lúc, giá giảm 25% so với mua lẻ.
-     */
+    /** Same idea as showStepUnlockDialog but for every currently-locked waypoint at once, at a
+     *  25%-off bundle price (real per-waypoint prices from the server, not a hardcoded constant). */
     private void showFullUnlockDialog() {
-        if (lockedWaypoints.isEmpty() || tour == null || tour.getWaypoints() == null) return;
-        int totalWaypoints = tour.getWaypoints().size();
-        int price = WaypointLockManager.fullUnlockPriceVnd(lockedWaypoints.size());
+        if (tour == null || tour.getWaypoints() == null) return;
+        List<Tour.Waypoint> lockedWaypoints = new ArrayList<>();
+        for (Tour.Waypoint wp : tour.getWaypoints()) if (wp.isLocked()) lockedWaypoints.add(wp);
+        if (lockedWaypoints.isEmpty()) return;
+        int price = WaypointLockManager.fullUnlockPriceVnd(lockedWaypoints);
 
-        showPayDialog("Pay " + price + " vnd to unlock", () -> {
-            WaypointLockManager.unlockAll(this, tour.getId(), totalWaypoints);
-            refreshLockedState();
-            Toast.makeText(this, "Payment successful! All waypoints unlocked.", Toast.LENGTH_SHORT).show();
+        showPayDialog("Pay " + price + " vnd to unlock", () ->
+                WaypointLockManager.unlockAllWaypoints(this, tour.getId(), new WaypointLockManager.UnlockCallback() {
+                    @Override
+                    public void onSuccess() {
+                        Toast.makeText(OngoingMapActivity.this, "Payment successful! All waypoints unlocked.", Toast.LENGTH_SHORT).show();
+                        refetchTourAndRefresh();
+                    }
+
+                    @Override
+                    public void onFailure(String message) {
+                        Toast.makeText(OngoingMapActivity.this, message, Toast.LENGTH_LONG).show();
+                    }
+                }));
+    }
+
+    /** Re-fetches this tour from the server (real data for whatever this device just unlocked -
+     *  the Tour object already in memory still holds the redacted placeholder for it) and rebinds
+     *  the stop cards + markers. */
+    private void refetchTourAndRefresh() {
+        String deviceId = DeviceIdProvider.getOrCreate(this);
+        ApiService api = ApiClient.getClient().create(ApiService.class);
+        api.getTourById(tour.getId(), deviceId).enqueue(new retrofit2.Callback<Tour>() {
+            @Override
+            public void onResponse(retrofit2.Call<Tour> call, retrofit2.Response<Tour> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    tour.setWaypoints(response.body().getWaypoints());
+                    refreshLockedState();
+                } else {
+                    Toast.makeText(OngoingMapActivity.this, "Đã mở khóa, nhưng không tải lại được dữ liệu mới.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(retrofit2.Call<Tour> call, Throwable t) {
+                Toast.makeText(OngoingMapActivity.this, "Đã mở khóa, nhưng không tải lại được dữ liệu mới.", Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
-    /** Dialog Pay dùng chung cho cả 2 trường hợp mở 1 step lẻ và mở full trip - khác nhau ở amountText + onPaid. */
+    /** Dialog Pay dùng chung - khác nhau ở amountText + onPaid. */
     private void showPayDialog(String amountText, Runnable onPaid) {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_unlock_waypoint, null);
         TextView txtAmount = dialogView.findViewById(R.id.txtUnlockAmount);
@@ -338,7 +469,8 @@ public class OngoingMapActivity extends AppCompatActivity {
 
         btnCancel.setOnClickListener(v -> dialog.dismiss());
         btnPay.setOnClickListener(v -> {
-            // Demo: không gọi API thanh toán thật, không validate gì - coi như thành công ngay lập tức.
+            // Demo: không gọi cổng thanh toán thật, không validate gì - coi như thành công ngay,
+            // nhưng onPaid ở trên vẫn gọi API unlock thật để server ghi nhận cho đúng thiết bị.
             onPaid.run();
             dialog.dismiss();
         });
@@ -346,92 +478,183 @@ public class OngoingMapActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private List<Marker> stopMarkers = new ArrayList<>();
+    // ===================== FEATURE 1: on-demand per-waypoint navigation =====================
 
-    private void initRouteOnMap() {
-        GeoPoint startPoint = myLocationStart;
-        routePoints.clear();
-        routePoints.add(startPoint);
+    /** Tapped an unlocked stop card. Gets a fresh location fix (requesting permission first if
+     *  needed) and draws a driving route from there to exactly this one waypoint - nothing is
+     *  drawn until this is called, and calling it again for a different stop clears whatever was
+     *  drawn before (see clearActiveRoute()). */
+    private void navigateToWaypoint(int position) {
+        if (tour == null || tour.getWaypoints() == null || position >= tour.getWaypoints().size()) return;
+        Tour.Waypoint wp = tour.getWaypoints().get(position);
+        if (wp.isLocked()) return; // defense in depth - the adapter shouldn't even call this for a locked stop
 
-        Marker startMarker = new Marker(map);
-        startMarker.setPosition(startPoint);
-        startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
-        startMarker.setTitle("My Location");
-        // Explicit small dot icon - osmdroid's bundled default marker drawable is a large
-        // hand-pointer-style pin that reads as a stray cursor once the map is full-bleed, so it
-        // needs its own icon just like the numbered stop pins below.
-        startMarker.setIcon(currentLocationDrawable());
-        map.getOverlays().add(startMarker);
-
-        if (tour.getWaypoints() != null) {
-            for (int i = 0; i < tour.getWaypoints().size(); i++) {
-                Tour.Waypoint wp = tour.getWaypoints().get(i);
-                if (wp.getCoordinate() != null && wp.getCoordinate().getCoordinates() != null) {
-                    List<Double> coords = wp.getCoordinate().getCoordinates();
-                    GeoPoint stopPoint = new GeoPoint(coords.get(1), coords.get(0));
-                    routePoints.add(stopPoint);
-
-                    Marker m = new Marker(map);
-                    m.setPosition(stopPoint);
-                    m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-                    m.setTitle("Step " + (i + 1) + ": " + wp.getLocationName());
-                    m.setIcon(numberedPinDrawable(i + 1));
-                    map.getOverlays().add(m);
-                    stopMarkers.add(m);
-                }
-            }
+        if (position == activeRouteTargetIndex) {
+            // Tapping the same already-routed stop again - just recenter, don't refetch/redraw.
+            if (activeRoutePolyline != null) map.getController().animateTo(waypointPoints.get(position));
+            return;
         }
 
-        // Only route through unlocked stops - drawing the road all the way to a locked/paywalled
-        // waypoint would show its location for free on the map even though the stop card itself
-        // is locked, defeating the paywall.
-        drawFullDetailedRoad(buildUnlockedRoutePoints());
-        map.getController().setCenter(startPoint);
-    }
-
-    /** Start point + every currently-unlocked waypoint, in order, skipping locked ones (which can
-     *  leave gaps - unlockWaypoint() lets a specific step be paid for individually, not just as a
-     *  contiguous prefix). Queries WaypointLockManager directly rather than the lockedWaypoints
-     *  field so it's correct even the very first time it's called from initRouteOnMap(), before
-     *  refreshLockedState() has run. Deliberately a separate list from routePoints, which keeps
-     *  one entry per waypoint regardless of lock state - onStopClick/drawStepRoad/recenterMap all
-     *  index into routePoints assuming that 1:1 correspondence with tour.getWaypoints(). */
-    private List<GeoPoint> buildUnlockedRoutePoints() {
-        List<GeoPoint> points = new ArrayList<>();
-        points.add(myLocationStart);
-        if (tour.getWaypoints() != null) {
-            for (int i = 0; i < tour.getWaypoints().size(); i++) {
-                if (!WaypointLockManager.isUnlocked(this, tour.getId(), i)) continue;
-                Tour.Waypoint wp = tour.getWaypoints().get(i);
-                if (wp.getCoordinate() != null && wp.getCoordinate().getCoordinates() != null) {
-                    List<Double> coords = wp.getCoordinate().getCoordinates();
-                    points.add(new GeoPoint(coords.get(1), coords.get(0)));
-                }
-            }
+        if (!LocationHelper.hasLocationPermission(this)) {
+            pendingNavigationTargetIndex = position;
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+            return;
         }
-        return points;
+        resolveLocationThenRoute(position);
     }
 
-    /** Re-fetches and redraws the main route line after a lock-state change, so unlocking a
-     *  waypoint (individually or via "Unlock full") extends the visible path to it. Removes the
-     *  previous main-route overlay first (matched by MAIN_ROUTE_COLOR, same pattern drawStepRoad
-     *  already uses for its own highlight overlay) so unlocks don't stack multiple stale routes
-     *  on top of each other. */
-    private void redrawMainRoute() {
-        if (map == null) return;
-        map.getOverlays().removeIf(o -> o instanceof Polyline && ((Polyline) o).getOutlinePaint().getColor() == MAIN_ROUTE_COLOR);
+    /** Shown in the route-info pill while a fix is being acquired - LocationHelper's own
+     *  HIGH_ACCURACY_TIMEOUT_MS (12s) bounds how long this can stay up before it falls back to a
+     *  cached location or gives up, so this never hangs indefinitely with no feedback. */
+    private void showLocationLoading() {
+        txtRouteDistance.setText("Đang xác định vị trí...");
+        txtRouteDuration.setText("");
+        cardRouteInfo.setVisibility(View.VISIBLE);
+    }
+
+    private void resolveLocationThenRoute(int position) {
+        showLocationLoading();
+        LocationHelper.getCurrentLocation(this, new LocationHelper.LocationCallback() {
+            @Override
+            public void onLocation(double lat, double lng, boolean approximate) {
+                myLocation = new GeoPoint(lat, lng);
+                placeMyLocationMarker();
+                if (approximate) {
+                    // Timed out on a fresh high-accuracy fix, or none was available - routing off
+                    // a cached (possibly old/wrong) location, so the user should know the route
+                    // might not start from where they actually are right now.
+                    Toast.makeText(OngoingMapActivity.this,
+                            "Không lấy được vị trí chính xác - dùng vị trí gần đây nhất, có thể không đúng.",
+                            Toast.LENGTH_LONG).show();
+                }
+                fetchAndDrawRoute(position);
+            }
+
+            @Override
+            public void onUnavailable(String message) {
+                cardRouteInfo.setVisibility(View.GONE);
+                Toast.makeText(OngoingMapActivity.this, message, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void fetchAndDrawRoute(int position) {
+        if (myLocation == null || position >= waypointPoints.size()) return;
+        GeoPoint dest = waypointPoints.get(position);
+
+        MapboxDirectionsClient.fetchRoute(myLocation.getLatitude(), myLocation.getLongitude(),
+                dest.getLatitude(), dest.getLongitude(), new MapboxDirectionsClient.RouteCallback() {
+                    @Override
+                    public void onRouteReady(MapboxDirectionsClient.Route route) {
+                        runOnUiThread(() -> {
+                            clearActiveRoute();
+                            drawRoute(route);
+                            activeRouteTargetIndex = position;
+                            showRouteInfo(route.distanceMeters, route.durationSeconds);
+                            map.getController().animateTo(dest);
+                        });
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        runOnUiThread(() -> {
+                            cardRouteInfo.setVisibility(View.GONE); // clear the "Đang xác định vị trí..." pill
+                            Toast.makeText(OngoingMapActivity.this, message, Toast.LENGTH_LONG).show();
+                        });
+                    }
+                });
+    }
+
+    private void drawRoute(MapboxDirectionsClient.Route route) {
+        Polyline polyline = new Polyline();
+        polyline.setPoints(route.geometry);
+        polyline.getOutlinePaint().setColor(ACTIVE_ROUTE_COLOR);
+        polyline.getOutlinePaint().setStrokeWidth(9f);
+        map.getOverlays().add(polyline);
+        activeRoutePolyline = polyline;
         map.invalidate();
-        drawFullDetailedRoad(buildUnlockedRoutePoints());
     }
 
-    /** Re-icons the numbered pins after a lock-state change (kept plain green for now - the
-     *  lock/unlock distinction lives on the stop cards, not the map pins, per the design spec). */
-    private void redrawMarkers() {
+    /** Clears whatever on-demand route is currently drawn - called before drawing a new one (only
+     *  ever one route visible at a time, per Feature 1.4) and by the "✕" button. */
+    private void clearActiveRoute() {
+        if (activeRoutePolyline != null) {
+            map.getOverlays().remove(activeRoutePolyline);
+            map.invalidate();
+            activeRoutePolyline = null;
+        }
+        activeRouteTargetIndex = -1;
+        cardRouteInfo.setVisibility(View.GONE);
+    }
+
+    private void showRouteInfo(double distanceMeters, double durationSeconds) {
+        String distanceText = distanceMeters >= 1000
+                ? String.format(Locale.getDefault(), "%.1f km", distanceMeters / 1000.0)
+                : String.format(Locale.getDefault(), "%.0f m", distanceMeters);
+
+        int totalMinutes = (int) Math.round(durationSeconds / 60.0);
+        String durationText = totalMinutes >= 60
+                ? String.format(Locale.getDefault(), "%d giờ %d phút", totalMinutes / 60, totalMinutes % 60)
+                : String.format(Locale.getDefault(), "%d phút", totalMinutes);
+
+        txtRouteDistance.setText(distanceText);
+        txtRouteDuration.setText(durationText);
+        cardRouteInfo.setVisibility(View.VISIBLE);
+    }
+
+    // ===================== Markers =====================
+
+    /** (Re)draws every waypoint marker from scratch - a numbered green pin for a free/unlocked
+     *  stop at its real coordinate, or a muted "mystery" pin for a still-locked stop at the
+     *  approximate/fuzzed coordinate the server already substituted (see waypointVisibility.js;
+     *  the client never sees the real one to begin with, so there's nothing to additionally hide
+     *  here beyond the marker's own look). Does not touch the active route or "my location"
+     *  marker. */
+    private void placeMarkers() {
+        for (Marker m : stopMarkers) map.getOverlays().remove(m);
+        stopMarkers.clear();
+        waypointPoints.clear();
+
+        if (tour.getWaypoints() == null) return;
+        for (int i = 0; i < tour.getWaypoints().size(); i++) {
+            Tour.Waypoint wp = tour.getWaypoints().get(i);
+            if (wp.getCoordinate() == null || wp.getCoordinate().getCoordinates() == null) continue;
+
+            List<Double> coords = wp.getCoordinate().getCoordinates();
+            GeoPoint stopPoint = new GeoPoint(coords.get(1), coords.get(0));
+            waypointPoints.add(stopPoint);
+
+            Marker m = new Marker(map);
+            m.setPosition(stopPoint);
+            m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+            boolean locked = wp.isLocked();
+            m.setTitle(locked ? "Điểm chưa mở khóa" : "Step " + (i + 1) + ": " + wp.getLocationName());
+            m.setIcon(locked ? mysteryPinDrawable() : numberedPinDrawable(i + 1));
+            map.getOverlays().add(m);
+            stopMarkers.add(m);
+        }
+        map.invalidate();
+
+        if (!waypointPoints.isEmpty() && myLocation == null) {
+            map.getController().setCenter(waypointPoints.get(0));
+        }
+    }
+
+    private void placeMyLocationMarker() {
+        if (myLocation == null) return;
+        if (myLocationMarker != null) map.getOverlays().remove(myLocationMarker);
+        myLocationMarker = new Marker(map);
+        myLocationMarker.setPosition(myLocation);
+        myLocationMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER);
+        myLocationMarker.setTitle("My Location");
+        myLocationMarker.setIcon(currentLocationDrawable());
+        map.getOverlays().add(myLocationMarker);
         map.invalidate();
     }
 
-    /** Small filled dot with a white ring - the "My Location" start-point marker. Deliberately
-     *  plain/small so it doesn't compete visually with the numbered stop pins. */
+    /** Small filled dot with a white ring - the "My Location" marker, placed only once a real fix
+     *  comes back (Feature 1.1) - deliberately plain/small so it doesn't compete visually with the
+     *  numbered stop pins. */
     private Drawable currentLocationDrawable() {
         float density = getResources().getDisplayMetrics().density * 2f;
         int size = Math.round(22 * density);
@@ -463,6 +686,18 @@ public class OngoingMapActivity extends AppCompatActivity {
      *  Zero-padded by hand (not String.format's locale-sensitive %d) so the glyph is always a
      *  plain ASCII "0"-"9", regardless of the device's default locale/numbering system. */
     private Drawable numberedPinDrawable(int number) {
+        String label = number < 10 ? "0" + number : String.valueOf(number);
+        return pinDrawable("#2E7D32", label, false);
+    }
+
+    /** Muted gray teardrop pin with a small "?" - a still-locked waypoint's approximate/fuzzed
+     *  location (Feature 2): visible enough to say "there's something here" without the numbered,
+     *  fully-confident look of an unlocked stop. */
+    private Drawable mysteryPinDrawable() {
+        return pinDrawable("#9E9E9E", "?", true);
+    }
+
+    private Drawable pinDrawable(String colorHex, String label, boolean dashedRing) {
         // Supersample at 2x, then tell the Bitmap its density is 2x the real one so
         // BitmapDrawable scales it back down to the intended 40x52dp footprint on screen -
         // without this the pin would render twice too big.
@@ -477,8 +712,9 @@ public class OngoingMapActivity extends AppCompatActivity {
         Canvas canvas = new Canvas(bitmap);
 
         Paint pinPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        pinPaint.setColor(Color.parseColor("#2E7D32"));
+        pinPaint.setColor(Color.parseColor(colorHex));
         pinPaint.setStyle(Paint.Style.FILL);
+        if (dashedRing) pinPaint.setAlpha(200); // slightly translucent - "approximate", not exact
 
         float cx = w / 2f;
         float cy = radius + density;
@@ -491,7 +727,6 @@ public class OngoingMapActivity extends AppCompatActivity {
         pinPath.close();
         canvas.drawPath(pinPath, pinPaint);
 
-        String label = number < 10 ? "0" + number : String.valueOf(number);
         Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         textPaint.setColor(Color.WHITE);
         textPaint.setTextSize(15 * density);
@@ -502,60 +737,6 @@ public class OngoingMapActivity extends AppCompatActivity {
         canvas.drawText(label, cx, textY, textPaint);
 
         return new BitmapDrawable(getResources(), bitmap);
-    }
-
-    private void drawFullDetailedRoad(List<GeoPoint> points) {
-        if (points.size() < 2) return;
-        new Thread(() -> {
-            try {
-                RoadManager roadManager = new OSRMRoadManager(getApplicationContext(), getPackageName());
-                Road road = roadManager.getRoad(new ArrayList<>(points));
-                if (road.mStatus == Road.STATUS_OK) {
-                    Polyline roadOverlay = RoadManager.buildRoadOverlay(road);
-                    roadOverlay.getOutlinePaint().setColor(MAIN_ROUTE_COLOR);
-                    roadOverlay.getOutlinePaint().setStrokeWidth(9f);
-                    roadOverlay.getOutlinePaint().setPathEffect(new DashPathEffect(new float[]{22f, 16f}, 0));
-
-                    runOnUiThread(() -> {
-                        if (map != null) {
-                            map.getOverlays().add(roadOverlay);
-                            map.invalidate();
-                        }
-                    });
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }).start();
-    }
-
-    private void drawStepRoad(int startIdx, int endIdx) {
-        new Thread(() -> {
-            try {
-                RoadManager roadManager = new OSRMRoadManager(getApplicationContext(), getPackageName());
-                ArrayList<GeoPoint> points = new ArrayList<>();
-                points.add(routePoints.get(startIdx));
-                points.add(routePoints.get(endIdx));
-
-                Road road = roadManager.getRoad(points);
-                if (road.mStatus == Road.STATUS_OK) {
-                    Polyline stepOverlay = RoadManager.buildRoadOverlay(road);
-                    int highlightColor = Color.parseColor("#66BB6A");
-                    stepOverlay.getOutlinePaint().setColor(highlightColor);
-                    stepOverlay.getOutlinePaint().setStrokeWidth(12f);
-
-                    runOnUiThread(() -> {
-                        if (map != null) {
-                            map.getOverlays().removeIf(o -> o instanceof Polyline && ((Polyline) o).getOutlinePaint().getColor() == highlightColor);
-                            map.getOverlays().add(stepOverlay);
-                            map.invalidate();
-                        }
-                    });
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }).start();
     }
 
     private int dp(int value) {

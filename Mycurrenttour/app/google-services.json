@@ -1,41 +1,41 @@
 {
   "project_info": {
-    "project_number": "312403546799",
-    "project_id": "myproject-8e6db",
-    "storage_bucket": "myproject-8e6db.firebasestorage.app"
+    "project_number": "314521576273",
+    "project_id": "tour-moment",
+    "storage_bucket": "tour-moment.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:312403546799:android:e4b61a39955e5c2c6eba5a",
+        "mobilesdk_app_id": "1:314521576273:android:baeadeb82c6db69f99a970",
         "android_client_info": {
           "package_name": "com.example.mycurrenttour"
         }
       },
       "oauth_client": [
         {
-          "client_id": "312403546799-gnai37a8ocq9amuc1rof0uu56s5ajkd4.apps.googleusercontent.com",
+          "client_id": "314521576273-ti9kko71vonsmeulj8b6lkhephvj16ca.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.mycurrenttour",
-            "certificate_hash": "477f905960ea4c805138698a19bd65dedafc5a55"
+            "certificate_hash": "388ea5d5cdf3ddc0de6eb8c00fd3354336526bf2"
           }
         },
         {
-          "client_id": "312403546799-hjn39b9pu5c5aquisn640orj81qatqub.apps.googleusercontent.com",
+          "client_id": "314521576273-vl2f2oshj0rkdj5523ftngs44nolkdpk.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBqZnDqdOTNGK8oVRaoNglyp29iUdl3xuc"
+          "current_key": "AIzaSyC49Cuq2_R9JHhUjD7Q83GfFOQ4HC3iLQg"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "312403546799-hjn39b9pu5c5aquisn640orj81qatqub.apps.googleusercontent.com",
+              "client_id": "314521576273-vl2f2oshj0rkdj5523ftngs44nolkdpk.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

@@ -17,6 +17,9 @@
 
     <!-- Reels empty state (matches the app's existing primary green used elsewhere, e.g. TourDetailActivity) -->
     <color name="green_dark_primary">#2E7D32</color>
+    <!-- Tour Detail reviews section - divider lines between review cards (a bit more visible than
+         bg_light_green_round's #E8F5E9 chip fill, still on the same pale-green family). -->
+    <color name="divider_light_green">#C8E6C9</color>
 
     <!-- Floating bottom nav capsule -->
     <!-- Inactive icon/label tint - shared by bottom_nav_icon_color.xml, bottom_nav_item_color.xml

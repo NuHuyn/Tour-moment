@@ -31,3 +31,6 @@ local.properties
 # Backend uploads
 uploads/
 tour-backend/uploads/
+
+# Local DB backups (contain real user trip data - never commit)
+tour-backend/backups/

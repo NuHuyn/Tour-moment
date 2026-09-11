@@ -95,12 +95,11 @@
     <string name="provider_by_format">bởi %1$s</string>
     <string name="tour_duration_format">%1$dN%2$dĐ</string>
     <string name="share_via">Chia sẻ qua</string>
-    <string name="share_text_fallback">Khám phá chuyến đi này trên TourMoment!</string>
+    <string name="share_text_fallback">Khám phá chuyến đi này trên JourneyLog!</string>
     <string name="show_more_toggle">Xem thêm ⌄</string>
     <string name="show_less_toggle">Thu gọn ⌃</string>
     <string name="label_tour_code">Mã tour</string>
     <string name="label_duration">Thời gian</string>
-    <string name="label_seats_left">Số chỗ còn lại</string>
     <string name="label_start_date">Ngày đi</string>
     <string name="label_end_date">Ngày về</string>
     <string name="label_explore_destinations">Khám phá điểm đến</string>
@@ -115,4 +114,49 @@
         <item quantity="one">(%d đánh giá)</item>
         <item quantity="other">(%d đánh giá)</item>
     </plurals>
+
+    <!-- ================= Reviews section (Tour Detail) ================= -->
+    <string name="label_reviews">Đánh giá</string>
+    <string name="prompt_write_review">Viết đánh giá</string>
+    <string name="reviews_empty">Chưa có đánh giá nào. Hãy là người đầu tiên!</string>
+    <string name="hint_review_comment">Chia sẻ trải nghiệm của bạn…</string>
+    <string name="action_submit_review">Gửi đánh giá</string>
+    <string name="action_delete">Xóa</string>
+    <string name="error_select_rating">Vui lòng chọn số sao đánh giá</string>
+    <string name="dialog_signin_required_title">Cần đăng nhập</string>
+    <string name="dialog_signin_required_message">Bạn cần đăng nhập bằng Google để viết đánh giá.</string>
+    <string name="action_sign_in">Đăng nhập</string>
+    <string name="confirm_delete_review_title">Xóa đánh giá</string>
+    <string name="confirm_delete_review_message">Bạn có chắc muốn xóa đánh giá này không?</string>
+    <string name="default_reviewer_name">Người dùng JourneyLog</string>
+    <string name="review_submit_success">Đã gửi đánh giá của bạn</string>
+    <string name="review_update_success">Đã cập nhật đánh giá</string>
+    <string name="review_delete_success">Đã xóa đánh giá</string>
+    <string name="review_submit_failed">Không thể gửi đánh giá, vui lòng thử lại</string>
+    <string name="reviews_load_failed">Không thể tải đánh giá</string>
+
+    <!-- ================= Login (Firebase Auth) ================= -->
+    <string name="hint_email">Email</string>
+    <string name="hint_password">Mật khẩu</string>
+    <string name="action_sign_in_email">Đăng nhập</string>
+    <string name="action_sign_up_email">Đăng ký</string>
+    <string name="prompt_no_account">Chưa có tài khoản? Đăng ký ngay</string>
+    <string name="prompt_have_account">Đã có tài khoản? Đăng nhập</string>
+    <string name="action_forgot_password">Quên mật khẩu?</string>
+    <string name="label_or_divider">hoặc</string>
+    <string name="dialog_reset_password_title">Đặt lại mật khẩu</string>
+    <string name="dialog_reset_password_message">Nhập email của bạn, chúng tôi sẽ gửi liên kết đặt lại mật khẩu.</string>
+    <string name="action_send">Gửi</string>
+    <string name="toast_reset_email_sent">Đã gửi email đặt lại mật khẩu, vui lòng kiểm tra hộp thư.</string>
+    <string name="error_email_required">Vui lòng nhập email</string>
+    <string name="error_password_required">Vui lòng nhập mật khẩu</string>
+    <string name="error_password_too_short">Mật khẩu phải có ít nhất 6 ký tự</string>
+    <string name="error_invalid_email">Email không hợp lệ</string>
+    <string name="error_wrong_password">Sai email hoặc mật khẩu, vui lòng thử lại</string>
+    <string name="error_user_not_found">Không tìm thấy tài khoản với email này</string>
+    <string name="error_email_in_use">Email này đã được đăng ký, hãy đăng nhập</string>
+    <string name="error_weak_password">Mật khẩu quá yếu, hãy chọn mật khẩu khác</string>
+    <string name="error_auth_generic">Đăng nhập thất bại, vui lòng thử lại</string>
+    <string name="error_network">Không có kết nối mạng, vui lòng thử lại</string>
+    <string name="error_sync_backend_failed">Đăng nhập thành công nhưng không đồng bộ được với máy chủ, vui lòng thử lại</string>
 </resources>

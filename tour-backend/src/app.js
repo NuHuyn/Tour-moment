@@ -17,7 +17,7 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Root route check
 app.get("/", (req, res) => {
-  res.send("Tour Moment API is running...");
+  res.send("JourneyLog API is running...");
 });
 
 // API Routes

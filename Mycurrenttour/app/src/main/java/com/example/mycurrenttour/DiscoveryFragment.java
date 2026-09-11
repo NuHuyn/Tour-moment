@@ -321,7 +321,7 @@ public class DiscoveryFragment extends Fragment {
 
         final int requestId = ++loadRequestId;
 
-        apiService.getSharedTours().enqueue(new Callback<List<Tour>>() {
+        apiService.getSharedTours(DeviceIdProvider.getOrCreate(requireContext())).enqueue(new Callback<List<Tour>>() {
             @Override
             public void onResponse(Call<List<Tour>> call, Response<List<Tour>> response) {
                 if (!isAdded()) return;

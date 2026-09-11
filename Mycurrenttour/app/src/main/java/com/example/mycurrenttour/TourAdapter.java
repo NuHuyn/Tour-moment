@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -57,6 +58,11 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
         TextView txtTitle, txtStartDate, txtAuthorName, txtMeta;
         TextView btnShareToPublic, btnMemorableVideo, btnAddTour, btnStartJourney;
 
+        // Discovery-card only (item_tour_discovery.xml) - null on item_tour.xml (My Tour cards),
+        // which has no rating row; every use below is null-guarded.
+        LinearLayout layoutCardRatingStars;
+        TextView txtCardRatingScore;
+
         public ViewHolder(View itemView) {
             super(itemView);
             imgTour = itemView.findViewById(R.id.imgTourLogItem);
@@ -71,8 +77,11 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
             // Buttons
             btnShareToPublic = itemView.findViewById(R.id.btnShareToPublicItem);
             btnMemorableVideo = itemView.findViewById(R.id.btnMemorableVideoItem);
-            btnAddTour = itemView.findViewById(R.id.btnAddTourItem); 
+            btnAddTour = itemView.findViewById(R.id.btnAddTourItem);
             btnStartJourney = itemView.findViewById(R.id.btnStartJourneyItem);
+
+            layoutCardRatingStars = itemView.findViewById(R.id.layoutCardRatingStars);
+            txtCardRatingScore = itemView.findViewById(R.id.txtCardRatingScore);
         }
     }
 
@@ -122,6 +131,8 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
                 holder.txtMeta.setVisibility(View.VISIBLE);
             }
         }
+
+        bindCardRating(holder, tour);
 
         String status = tour.getStatus() != null ? tour.getStatus().trim() : "";
 
@@ -253,7 +264,8 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
             return;
         }
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
-        apiService.copyTour(tour.getId(), new ApiService.UserCopyRequest(myId)).enqueue(new Callback<Tour>() {
+        String deviceId = DeviceIdProvider.getOrCreate(context);
+        apiService.copyTour(tour.getId(), new ApiService.UserCopyRequest(myId, deviceId)).enqueue(new Callback<Tour>() {
             @Override
             public void onResponse(Call<Tour> call, Response<Tour> response) {
                 if (response.isSuccessful()) {
@@ -290,6 +302,41 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
         if (holder.btnShareToPublic == null) return;
         holder.btnShareToPublic.setText(isShared ? "Shared" : "Share to public");
         holder.btnShareToPublic.getBackground().setTint(isShared ? Color.parseColor("#2E7D32") : Color.parseColor("#D32F2F"));
+    }
+
+    /** Discovery-card-only 5-star row (item_tour_discovery.xml's layoutCardRatingStars/
+     *  txtCardRatingScore - null on item_tour.xml, so this is a no-op there). Stars up to
+     *  round(avgRating) render gold (ic_star_filled), the rest gray (ic_star_gray); with no
+     *  reviews yet (reviewCount == 0) all 5 stay gray and the numeric score is hidden instead of
+     *  showing a misleading "0.0". */
+    private void bindCardRating(ViewHolder holder, Tour tour) {
+        if (holder.layoutCardRatingStars == null) return;
+
+        int filledStars = tour.getReviewCount() > 0
+                ? Math.max(0, Math.min(5, (int) Math.round(tour.getAvgRating())))
+                : 0;
+
+        holder.layoutCardRatingStars.removeAllViews();
+        Context context = holder.itemView.getContext();
+        int starSizePx = Math.round(13 * context.getResources().getDisplayMetrics().density);
+        int starGapPx = Math.round(1 * context.getResources().getDisplayMetrics().density);
+        for (int i = 1; i <= 5; i++) {
+            ImageView star = new ImageView(context);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(starSizePx, starSizePx);
+            if (i > 1) lp.setMarginStart(starGapPx);
+            star.setLayoutParams(lp);
+            star.setImageResource(i <= filledStars ? R.drawable.ic_star_filled : R.drawable.ic_star_gray);
+            holder.layoutCardRatingStars.addView(star);
+        }
+
+        if (holder.txtCardRatingScore != null) {
+            if (tour.getReviewCount() > 0) {
+                holder.txtCardRatingScore.setText(String.format(Locale.getDefault(), "%.1f", tour.getAvgRating()));
+                holder.txtCardRatingScore.setVisibility(View.VISIBLE);
+            } else {
+                holder.txtCardRatingScore.setVisibility(View.GONE);
+            }
+        }
     }
 
     /** Builds the "3N2Đ - Quy Nhơn" meta line shown on both Discovery and My Tour cards, from data

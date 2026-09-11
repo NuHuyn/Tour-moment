@@ -74,7 +74,7 @@ public class ReelsFragment extends Fragment {
     private void loadReelsData() {
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
 
-        apiService.getSharedTours().enqueue(new Callback<List<Tour>>() {
+        apiService.getSharedTours(DeviceIdProvider.getOrCreate(requireContext())).enqueue(new Callback<List<Tour>>() {
             @Override
             public void onResponse(Call<List<Tour>> call, Response<List<Tour>> response) {
                 if (!isAdded()) return;

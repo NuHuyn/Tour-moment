@@ -1,85 +1,80 @@
 package com.example.mycurrenttour;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
- * Demo waypoint-lock / paywall (chưa gắn cổng thanh toán thật, chỉ mô phỏng UI cho báo cáo đồ án).
- * TODO: thay bằng logic khóa dựa trên thanh toán thật khi có backend.
+ * Waypoint unlock actions - now backed by the real server-side paywall (tour-backend's
+ * WaypointUnlock model + waypointVisibility.js redaction), not a local simulation.
  *
- * Đây là NGUỒN TRẠNG THÁI KHÓA DUY NHẤT, dùng chung cho cả màn Discovery
- * (TourDetailActivity) và My Travel (OngoingMapActivity) để 2 màn luôn khớp nhau,
- * và lưu bằng SharedPreferences (theo tourId) nên thoát app rồi vào lại vẫn còn.
+ * Previously this class WAS the entire paywall: "locked" was computed locally (a hardcoded "first
+ * 2 waypoints free, rest locked" rule) and persisted only in SharedPreferences, so a locked
+ * waypoint's real name/coordinates were already sitting in the Tour object the server had sent -
+ * hiding them was UI-only and trivially bypassed by inspecting the network response. That data is
+ * now redacted server-side and only revealed per-device once this class's unlock calls succeed -
+ * see Tour.Waypoint.isLocked(), which is now the single source of truth for lock state (set by the
+ * server on every fetch), not this class.
  *
- * Luật:
- * - 2 waypoint đầu tiên của mỗi tour luôn miễn phí / mở sẵn.
- * - Từ waypoint thứ 3 trở đi: khóa mặc định, icon ổ khóa xanh lá cạnh icon chỉ đường;
- *   icon chỉ đường bị disable cho tới khi waypoint đó được mở.
- *   + Bấm icon ổ khóa của 1 step: trả 2.000đ để mở đúng step đó (unlockWaypoint).
- *   + Nút "Unlock" (full trip): mở hết toàn bộ waypoint còn khóa 1 lần, giảm 25% so với
- *     mua lẻ (vd 3 waypoint khóa: mua lẻ 3 x 2.000đ = 6.000đ, full chỉ 4.500đ).
+ * TODO: still no real payment gateway - OngoingMapActivity's "Pay" dialog calls unlockWaypoint/
+ * unlockAllWaypoints immediately on tap, with no actual charge. That part of the demo is unchanged.
  */
-public class WaypointLockManager {
+public final class WaypointLockManager {
 
-    private static final String PREFS_NAME = "waypoint_lock_prefs";
-    private static final int FREE_WAYPOINTS = 2;
-
-    public static final int PRICE_PER_WAYPOINT_VND = 2000;
     public static final double UNLOCK_FULL_DISCOUNT = 0.25;
 
     private WaypointLockManager() {}
 
-    private static SharedPreferences prefs(Context context) {
-        return context.getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    public interface UnlockCallback {
+        void onSuccess();
+        void onFailure(String message);
     }
 
-    private static String key(String tourId, int index) {
-        return tourId + "_wp_" + index;
+    public static void unlockWaypoint(Context context, String tourId, int index, UnlockCallback callback) {
+        String deviceId = DeviceIdProvider.getOrCreate(context);
+        ApiService api = ApiClient.getClient().create(ApiService.class);
+        api.unlockWaypoint(tourId, index, new ApiService.DeviceIdRequest(deviceId))
+                .enqueue(new Callback<ApiService.UnlockResponse>() {
+                    @Override
+                    public void onResponse(Call<ApiService.UnlockResponse> call, Response<ApiService.UnlockResponse> response) {
+                        if (response.isSuccessful()) callback.onSuccess();
+                        else callback.onFailure("Mở khóa thất bại (mã lỗi " + response.code() + ")");
+                    }
+
+                    @Override
+                    public void onFailure(Call<ApiService.UnlockResponse> call, Throwable t) {
+                        callback.onFailure("Không thể kết nối máy chủ: " + t.getMessage());
+                    }
+                });
     }
 
-    /** Waypoint tại index có đang mở hay không (2 waypoint đầu luôn true). */
-    public static boolean isUnlocked(Context context, String tourId, int index) {
-        if (index < FREE_WAYPOINTS) return true;
-        if (tourId == null) return true; // an toàn: không có id thì không áp khóa
-        return prefs(context).getBoolean(key(tourId, index), false);
+    public static void unlockAllWaypoints(Context context, String tourId, UnlockCallback callback) {
+        String deviceId = DeviceIdProvider.getOrCreate(context);
+        ApiService api = ApiClient.getClient().create(ApiService.class);
+        api.unlockAllWaypoints(tourId, new ApiService.DeviceIdRequest(deviceId))
+                .enqueue(new Callback<ApiService.UnlockResponse>() {
+                    @Override
+                    public void onResponse(Call<ApiService.UnlockResponse> call, Response<ApiService.UnlockResponse> response) {
+                        if (response.isSuccessful()) callback.onSuccess();
+                        else callback.onFailure("Mở khóa thất bại (mã lỗi " + response.code() + ")");
+                    }
+
+                    @Override
+                    public void onFailure(Call<ApiService.UnlockResponse> call, Throwable t) {
+                        callback.onFailure("Không thể kết nối máy chủ: " + t.getMessage());
+                    }
+                });
     }
 
-    /** Danh sách vị trí đang khóa của 1 tour — đưa thẳng vào WaypointViewAdapter.setLockedPositions(). */
-    public static Set<Integer> getLockedPositions(Context context, String tourId, int totalWaypoints) {
-        Set<Integer> locked = new LinkedHashSet<>();
-        for (int i = 0; i < totalWaypoints; i++) {
-            if (!isUnlocked(context, tourId, i)) locked.add(i);
-        }
-        return locked;
-    }
-
-    /** Mở đúng 1 waypoint được chỉ định (bấm icon ổ khóa của step nào thì mở step đó, trả 2.000đ). */
-    public static void unlockWaypoint(Context context, String tourId, int index) {
-        if (tourId == null || index < FREE_WAYPOINTS) return;
-        prefs(context).edit().putBoolean(key(tourId, index), true).apply();
-    }
-
-    /** Unlock full: mở hết toàn bộ waypoint còn khóa của tour cùng lúc. */
-    public static void unlockAll(Context context, String tourId, int totalWaypoints) {
-        if (tourId == null) return;
-        SharedPreferences.Editor editor = prefs(context).edit();
-        for (int i = FREE_WAYPOINTS; i < totalWaypoints; i++) {
-            editor.putBoolean(key(tourId, i), true);
-        }
-        editor.apply();
-    }
-
-    /** Giá mở lẻ đúng 1 waypoint (bấm icon ổ khóa của step đó). */
-    public static int stepPriceVnd() {
-        return PRICE_PER_WAYPOINT_VND;
-    }
-
-    /** Giá "Unlock full" cho toàn bộ waypoint đang khóa còn lại (đã giảm 25%). */
-    public static int fullUnlockPriceVnd(int remainingLockedCount) {
-        int individualTotal = remainingLockedCount * PRICE_PER_WAYPOINT_VND;
-        return (int) Math.round(individualTotal * (1 - UNLOCK_FULL_DISCOUNT));
+    /** Sum of the given (currently-locked) waypoints' real per-step prices, minus 25% - the
+     *  "Unlock Now" full-trip price shown on badgeUnlockDiscount/btnUnlockFull. */
+    public static int fullUnlockPriceVnd(List<Tour.Waypoint> lockedWaypoints) {
+        int total = 0;
+        for (Tour.Waypoint wp : lockedWaypoints) total += wp.getPrice();
+        return (int) Math.round(total * (1 - UNLOCK_FULL_DISCOUNT));
     }
 }

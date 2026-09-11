@@ -29,6 +29,19 @@
             android:src="@drawable/centralvietnam"
             android:contentDescription="@null" />
 
+        <!-- Frosted-glass scrim for a still-locked stop (Feature 2) - sits over the blurred
+             placeholder photo, under the gradient/text. Gone for free/unlocked stops. -->
+        <View
+            android:id="@+id/viewStopLockedScrim"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="#552D5A3D"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/guidelineStopGradient"
             android:layout_width="wrap_content"

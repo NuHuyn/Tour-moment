@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Filled gray star - unrated state for small (~12-16dp) star rows, e.g. the Discovery card
+     rating and item_review.xml's per-review stars, where a thin outline (ic_star_outline, meant
+     for the bigger 32dp tap-to-rate picker) would barely read at that size. Same path as
+     ic_star_filled/ic_star_outline. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#D6D6D6">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M12,17.27L18.18,21l-1.64,-7.03L22,9.24l-7.19,-0.61L12,2 9.19,8.63 2,9.24l5.46,4.73L5.82,21z" />
+</vector>

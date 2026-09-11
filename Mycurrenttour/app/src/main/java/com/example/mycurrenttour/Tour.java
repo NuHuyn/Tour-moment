@@ -26,7 +26,19 @@ public class Tour implements Serializable {
     @SerializedName("author")
     private UserDetails author;
 
+    // Computed live server-side from the Review collection (see tour-backend's reviewStats.js /
+    // reviewController.js) - not stored fields on the Tour document itself. Default 0/0 (not
+    // @SerializedName-required) so an older cached Tour without these still renders sanely (0
+    // reviews -> card shows all-gray stars, no crash).
+    private double avgRating;
+    private int reviewCount;
+
     private List<Waypoint> waypoints = new ArrayList<>();
+
+    public double getAvgRating() { return avgRating; }
+    public void setAvgRating(double avgRating) { this.avgRating = avgRating; }
+    public int getReviewCount() { return reviewCount; }
+    public void setReviewCount(int reviewCount) { this.reviewCount = reviewCount; }
 
     public int getTotalPrice() {
         int total = 0;
@@ -54,6 +66,13 @@ public class Tour implements Serializable {
         private int price;
         private List<String> photos = new ArrayList<>();
         private Coordinate coordinate;
+        // Server-computed, per-device: true only while this waypoint is paywalled (price > 0)
+        // AND this device hasn't unlocked it yet - see tour-backend's waypointVisibility.js.
+        // When true, locationName/note/coordinate are already redacted/fuzzed by the server, not
+        // just hidden client-side - real values were never sent. Defaults to false (not
+        // @SerializedName-required) so older cached/offline Tour objects without this field don't
+        // get misread as locked.
+        private boolean locked = false;
         private transient boolean isExpanded = false;
 
         public boolean isExpanded() { return isExpanded; }
@@ -68,6 +87,8 @@ public class Tour implements Serializable {
         public void setPhotos(List<String> photos) { this.photos = photos; }
         public Coordinate getCoordinate() { return coordinate; }
         public void setCoordinate(Coordinate coordinate) { this.coordinate = coordinate; }
+        public boolean isLocked() { return locked; }
+        public void setLocked(boolean locked) { this.locked = locked; }
     }
 
     public static class Coordinate implements Serializable {
