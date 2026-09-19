@@ -175,19 +175,14 @@ public interface ApiService {
     class ChatRequest {
         String message;
         List<ChatMessageDto> history;
-        // Non-null/non-empty only for a real Google session (see SessionManager.SignInType) -
-        // its presence, not its verification, is what the backend uses to grant the
-        // authenticated tier (no message cap) for this phase; see feasibility_report.md §1.5.
-        @SerializedName("googleId")
-        private String googleId;
-        @SerializedName("email")
-        private String email;
+        // The backend verifies this token before granting the uncapped authenticated tier.
+        @SerializedName("idToken")
+        private String idToken;
 
-        public ChatRequest(String message, List<ChatMessageDto> history, String googleId, String email) {
+        public ChatRequest(String message, List<ChatMessageDto> history, String idToken) {
             this.message = message;
             this.history = history;
-            this.googleId = googleId;
-            this.email = email;
+            this.idToken = idToken;
         }
     }
 

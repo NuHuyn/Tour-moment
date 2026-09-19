@@ -12,9 +12,9 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class ApiClient {
 
 
-    // Was http://35.224.85.222/ (a since-decommissioned/unreachable VM). Now Cloud Run,
-    // asia-southeast1, service "tour-moment-backend" - HTTPS by default, no cleartext needed.
-    private static final String BASE_URL = "https://tour-moment-backend-42345853831.asia-southeast1.run.app/";
+    // 10.0.2.2 routes from the Android emulator to this computer. Override API_BASE_URL in
+    // local.properties when using a physical device.
+    private static final String BASE_URL = BuildConfig.API_BASE_URL;
     private static Retrofit retrofit = null;
 
     public static Retrofit getClient() {

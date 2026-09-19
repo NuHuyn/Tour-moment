@@ -59,7 +59,9 @@ public class ReelsAdapter extends RecyclerView.Adapter<ReelsAdapter.ViewHolder> 
             for (Tour.Waypoint wp : tour.getWaypoints()) {
                 List<String> wpPhotos = wp.getPhotos();
                 if (wpPhotos != null && !wpPhotos.isEmpty()) {
-                    photos.addAll(wpPhotos);
+                    for (String photoUrl : wpPhotos) {
+                        if (photoUrl != null && !photoUrl.trim().isEmpty()) photos.add(photoUrl);
+                    }
                 }
             }
         }

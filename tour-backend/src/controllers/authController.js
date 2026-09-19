@@ -44,7 +44,7 @@ const verifyFirebaseUser = async (req, res, next) => {
           photoUrl: picture || null,
         },
       },
-      { new: true, upsert: true, runValidators: true }
+      { returnDocument: "after", upsert: true, runValidators: true }
     );
 
     res.json(user);

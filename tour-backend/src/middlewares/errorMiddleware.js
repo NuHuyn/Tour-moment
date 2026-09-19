@@ -7,8 +7,20 @@ const notFoundHandler = (req, res, next) => {
 
 // Middleware xử lý lỗi tập trung
 const errorHandler = (err, req, res, next) => {
-  const statusCode = res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
-  console.error(`[API Error] ${req.method} ${req.originalUrl}:`, err);
+  const reportedStatus = Number(err.statusCode || err.status);
+  let statusCode = reportedStatus >= 400 && reportedStatus <= 599
+    ? reportedStatus
+    : res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
+  if (err.name === "CastError" || err.name === "ValidationError" || err.name === "MulterError") {
+    statusCode = 400;
+  } else if (err.code === 11000) {
+    statusCode = 409;
+  }
+  if (statusCode >= 500) {
+    console.error(`[API Error] ${req.method} ${req.originalUrl}:`, err);
+  } else if (process.env.NODE_ENV !== "test") {
+    console.warn(`[API ${statusCode}] ${req.method} ${req.originalUrl}: ${err.message}`);
+  }
   
   res.status(statusCode).json({
     message: err.message || "Lỗi Server",

@@ -1,4 +1,6 @@
-package com.example.mycurrenttour;import android.app.Activity;
+package com.example.mycurrenttour;
+
+import android.app.Activity;
 import android.app.DatePickerDialog;
 import android.app.ProgressDialog;
 import android.content.Intent;
@@ -9,7 +11,6 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -32,6 +33,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.TimeZone;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -49,7 +51,6 @@ public class CreateTourActivity extends AppCompatActivity {
     private LinearLayout waypointContainer;
     private ExtendedFloatingActionButton btnAddWaypoint;
     private View layoutPlaceholder;
-    private CheckBox cbCreateVideo;
 
     private Date startDate = new Date();
     private Date endDate = new Date();
@@ -70,6 +71,7 @@ public class CreateTourActivity extends AppCompatActivity {
         apiService = ApiClient.getClient().create(ApiService.class);
         loadingDialog = new ProgressDialog(this);
         loadingDialog.setCancelable(false);
+        isoFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
         initViews();
         setupStatusSpinner();
@@ -99,7 +101,6 @@ public class CreateTourActivity extends AppCompatActivity {
         waypointContainer = findViewById(R.id.waypointContainer);
         btnAddWaypoint = findViewById(R.id.btnAddWaypoint);
         layoutPlaceholder = findViewById(R.id.layoutPlaceholder);
-        cbCreateVideo = findViewById(R.id.cbCreateVideo);
 
         btnPickStartDate.setText(displayFormat.format(startDate));
         btnPickEndDate.setText(displayFormat.format(endDate));
@@ -126,9 +127,14 @@ public class CreateTourActivity extends AppCompatActivity {
     private void startSavingProcess() {
         String title = edtTitle.getText().toString().trim();
         if (title.isEmpty()) {
-            Toast.makeText(this, "Please enter the trip name", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.error_trip_name_required, Toast.LENGTH_SHORT).show();
             return;
         }
+        if (endDate.before(startDate)) {
+            Toast.makeText(this, R.string.error_end_before_start, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!validateWaypoints()) return;
 
         btnSaveAndStart.setEnabled(false);
         if (pendingCoverUri != null) {
@@ -151,7 +157,9 @@ public class CreateTourActivity extends AppCompatActivity {
                     return;
                 }
 
-                RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
+                String mimeType = getContentResolver().getType(pendingCoverUri);
+                RequestBody requestFile = RequestBody.create(
+                        MediaType.parse(mimeType != null ? mimeType : "image/jpeg"), file);
                 MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
 
                 apiService.uploadImage(body).enqueue(new Callback<ApiService.UploadResponse>() {
@@ -176,8 +184,8 @@ public class CreateTourActivity extends AppCompatActivity {
     }
 
     private void saveFullTour(String title, String coverUrl) {
-        // userId is the backend User._id from LoginActivity's google-login call (SessionManager),
-        // not a Firebase uid - Firebase Auth is never engaged in this app.
+        // The backend uses the verified Firebase uid as User._id; SessionManager stores the same
+        // stable id after POST /api/auth/verify succeeds.
         String userId = SessionManager.getUserId(this);
         if (userId == null) {
             Toast.makeText(this, "User not logged in!", Toast.LENGTH_SHORT).show();
@@ -198,17 +206,11 @@ public class CreateTourActivity extends AppCompatActivity {
         tour.setEndDate(isoFormat.format(endDate));
 
         List<Tour.Waypoint> waypoints = new ArrayList<>();
-        List<String> videoPhotos = new ArrayList<>();
-        if (!coverUrl.isEmpty()) videoPhotos.add(coverUrl);
 
         for (int i = 0; i < waypointContainer.getChildCount(); i++) {
-            waypoints.add(parseWaypoint(waypointContainer.getChildAt(i), videoPhotos));
+            waypoints.add(parseWaypoint(waypointContainer.getChildAt(i)));
         }
         tour.setWaypoints(waypoints);
-
-        if (cbCreateVideo.isChecked() && !videoPhotos.isEmpty()) {
-            tour.setVideoUrl(videoPhotos.get(0)); // Placeholder logic for video
-        }
 
         apiService.createTour(tour).enqueue(new Callback<Tour>() {
             @Override
@@ -233,7 +235,7 @@ public class CreateTourActivity extends AppCompatActivity {
         });
     }
 
-    private Tour.Waypoint parseWaypoint(View v, List<String> videoPhotos) {
+    private Tour.Waypoint parseWaypoint(View v) {
         TextInputEditText edtWpName = v.findViewById(R.id.edtWpLocationName);
         TextInputEditText edtWpPrice = v.findViewById(R.id.edtWpPrice);
         TextInputEditText edtWpNote = v.findViewById(R.id.edtWpNote);
@@ -245,12 +247,15 @@ public class CreateTourActivity extends AppCompatActivity {
         wp.setLocationName(edtWpName.getText().toString().trim());
         wp.setNote(edtWpNote.getText().toString().trim());
         String pStr = edtWpPrice.getText().toString().trim();
-        wp.setPrice(pStr.isEmpty() ? 0 : Integer.parseInt(pStr));
+        try {
+            wp.setPrice(pStr.isEmpty() ? 0 : Integer.parseInt(pStr));
+        } catch (NumberFormatException ignored) {
+            wp.setPrice(0);
+        }
 
         if (imgWp.getTag() != null) {
             String wpUrl = (String) imgWp.getTag();
             wp.setPhotos(Arrays.asList(wpUrl));
-            videoPhotos.add(wpUrl);
         }
 
         try {
@@ -262,6 +267,48 @@ public class CreateTourActivity extends AppCompatActivity {
             wp.setCoordinate(coord);
         } catch (Exception e) {}
         return wp;
+    }
+
+    private boolean validateWaypoints() {
+        if (waypointContainer.getChildCount() == 0) {
+            Toast.makeText(this, R.string.error_stop_required, Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        for (int i = 0; i < waypointContainer.getChildCount(); i++) {
+            View waypointView = waypointContainer.getChildAt(i);
+            TextInputEditText name = waypointView.findViewById(R.id.edtWpLocationName);
+            TextInputEditText price = waypointView.findViewById(R.id.edtWpPrice);
+            TextInputEditText latitude = waypointView.findViewById(R.id.edtWpLat);
+            TextInputEditText longitude = waypointView.findViewById(R.id.edtWpLng);
+
+            if (name.getText() == null || name.getText().toString().trim().isEmpty()) {
+                name.setError(getString(R.string.error_location_name_required));
+                name.requestFocus();
+                return false;
+            }
+            try {
+                String rawPrice = price.getText() == null ? "" : price.getText().toString().trim();
+                if (!rawPrice.isEmpty() && Integer.parseInt(rawPrice) < 0) throw new NumberFormatException();
+            } catch (NumberFormatException error) {
+                price.setError(getString(R.string.error_price_invalid));
+                price.requestFocus();
+                return false;
+            }
+            try {
+                double lat = Double.parseDouble(latitude.getText().toString().trim());
+                double lng = Double.parseDouble(longitude.getText().toString().trim());
+                if (!Double.isFinite(lat) || !Double.isFinite(lng)
+                        || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+                    throw new NumberFormatException();
+                }
+            } catch (Exception error) {
+                latitude.setError(getString(R.string.error_coordinates_invalid));
+                latitude.requestFocus();
+                return false;
+            }
+        }
+        return true;
     }
 
     private void uploadWaypointImage(Uri uri, ImageView targetImageView) {
@@ -276,7 +323,9 @@ public class CreateTourActivity extends AppCompatActivity {
                     return;
                 }
 
-                RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
+                String mimeType = getContentResolver().getType(uri);
+                RequestBody requestFile = RequestBody.create(
+                        MediaType.parse(mimeType != null ? mimeType : "image/jpeg"), file);
                 MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
 
                 apiService.uploadImage(body).enqueue(new Callback<ApiService.UploadResponse>() {
@@ -301,7 +350,7 @@ public class CreateTourActivity extends AppCompatActivity {
     }
 
     private void addWaypointField() {
-        View v = getLayoutInflater().inflate(R.layout.item_waypoint, null);
+        View v = getLayoutInflater().inflate(R.layout.item_waypoint, waypointContainer, false);
         ImageView imgWpPreview = v.findViewById(R.id.imgWpPreview);
         Button btnSelectImg = v.findViewById(R.id.btnSelectImg);
         ((TextView)v.findViewById(R.id.txtWpTitle)).setText("Stop " + (waypointContainer.getChildCount() + 1));

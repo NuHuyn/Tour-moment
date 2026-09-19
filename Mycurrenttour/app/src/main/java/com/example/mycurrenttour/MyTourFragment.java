@@ -117,9 +117,8 @@ public class MyTourFragment extends Fragment implements TourAdapter.OnTourAction
             return;
         }
 
-        // userId is the backend User._id from LoginActivity's google-login call (SessionManager),
-        // not a Firebase uid - Firebase Auth is never engaged in this app. null here means either
-        // Guest sign-in or not signed in at all, so there is no "my tours" to show.
+        // Authenticated sessions use the backend User._id; guests use a persistent local id.
+        // A null value only means no session has been created yet.
         String userId = SessionManager.getUserId(getContext());
         if (userId == null) return;
 

@@ -29,10 +29,16 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
         Tour tour = (Tour) getIntent().getSerializableExtra("tour_item");
         if (tour != null) {
-            if (tour.getImageUrl() != null) photos.add(tour.getImageUrl());
+            if (tour.getImageUrl() != null && !tour.getImageUrl().trim().isEmpty()) {
+                photos.add(tour.getImageUrl());
+            }
             if (tour.getWaypoints() != null) {
                 for (Tour.Waypoint wp : tour.getWaypoints()) {
-                    if (wp.getPhotos() != null) photos.addAll(wp.getPhotos());
+                    if (wp.getPhotos() != null) {
+                        for (String photoUrl : wp.getPhotos()) {
+                            if (photoUrl != null && !photoUrl.trim().isEmpty()) photos.add(photoUrl);
+                        }
+                    }
                 }
             }
 

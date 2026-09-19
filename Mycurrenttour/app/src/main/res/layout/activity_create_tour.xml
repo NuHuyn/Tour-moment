@@ -171,30 +171,6 @@
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="16dp"/>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="8dp"
-            android:layout_marginTop="16dp"
-            android:background="@android:color/white"
-            android:layout_marginBottom="8dp">
-
-            <CheckBox
-                android:id="@+id/cbCreateVideo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:buttonTint="#2E7D32" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Create a memory video automatically from these images."
-                android:textColor="#333333"
-                android:textSize="14sp" />
-        </LinearLayout>
-
         <Button
             android:id="@+id/btnSaveAndStart"
             android:layout_width="match_parent"

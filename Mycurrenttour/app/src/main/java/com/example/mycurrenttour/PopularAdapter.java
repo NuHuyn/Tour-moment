@@ -96,14 +96,17 @@ public class PopularAdapter extends RecyclerView.Adapter<PopularAdapter.ViewHold
         }
 
         String imageUrl = tour.getImageUrl();
-
-        Picasso.get()
-                .load(imageUrl)
-                .fit()
-                .centerCrop()
-                .placeholder(R.drawable.centralvietnam)
-                .error(R.drawable.centralvietnam)
-                .into(holder.img);
+        if (imageUrl == null || imageUrl.trim().isEmpty()) {
+            holder.img.setImageResource(R.drawable.centralvietnam);
+        } else {
+            Picasso.get()
+                    .load(imageUrl)
+                    .fit()
+                    .centerCrop()
+                    .placeholder(R.drawable.centralvietnam)
+                    .error(R.drawable.centralvietnam)
+                    .into(holder.img);
+        }
 
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, TourDetailActivity.class);

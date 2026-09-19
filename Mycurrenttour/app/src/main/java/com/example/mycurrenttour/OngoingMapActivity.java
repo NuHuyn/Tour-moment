@@ -155,8 +155,10 @@ public class OngoingMapActivity extends AppCompatActivity {
         for (Tour.Waypoint wp : tour.getWaypoints()) {
             if (count >= 4) break;
             if (wp.isLocked()) continue;
-            if (wp.getPhotos() != null && !wp.getPhotos().isEmpty() && !wp.getPhotos().get(0).isEmpty()) {
-                Picasso.get().load(wp.getPhotos().get(0)).fetch();
+            String photoUrl = wp.getPhotos() != null && !wp.getPhotos().isEmpty()
+                    ? wp.getPhotos().get(0) : null;
+            if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+                Picasso.get().load(photoUrl).fetch();
                 count++;
             }
         }
@@ -621,7 +623,13 @@ public class OngoingMapActivity extends AppCompatActivity {
             if (wp.getCoordinate() == null || wp.getCoordinate().getCoordinates() == null) continue;
 
             List<Double> coords = wp.getCoordinate().getCoordinates();
-            GeoPoint stopPoint = new GeoPoint(coords.get(1), coords.get(0));
+            if (coords.size() < 2 || coords.get(0) == null || coords.get(1) == null) continue;
+            double longitude = coords.get(0);
+            double latitude = coords.get(1);
+            if (Double.isNaN(longitude) || Double.isInfinite(longitude)
+                    || Double.isNaN(latitude) || Double.isInfinite(latitude)
+                    || Math.abs(longitude) > 180 || Math.abs(latitude) > 90) continue;
+            GeoPoint stopPoint = new GeoPoint(latitude, longitude);
             waypointPoints.add(stopPoint);
 
             Marker m = new Marker(map);

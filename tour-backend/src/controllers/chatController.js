@@ -4,21 +4,18 @@
  * queries against MongoDB - every tool call resolves to one of the fixed, parameterized
  * functions in that file.
  *
- * Access tiers (per this phase's spec - real auth/ID-token verification is explicitly
- * deferred, see feasibility_report.md §1.3/1.5 and the report filed alongside this change):
- *   - "Authenticated": request includes a non-empty googleId, trusted as-is (same self-reported
- *     trust model the rest of this app already uses for authController's google-login) -> no
+ * Access tiers:
+ *   - "Authenticated": request includes a Firebase ID token verified by firebase-admin -> no
  *     message cap, slightly less terse off-topic handling.
- *   - "Guest": no googleId -> capped at GUEST_MESSAGE_LIMIT user messages per conversation
+ *   - "Guest": no valid ID token -> capped at GUEST_MESSAGE_LIMIT user messages per conversation
  *     (counted from the `history` the client sends back each turn - there is no server-side
- *     session store in this app, so this is inherently as trustworthy as the client is; a
- *     guest could bypass it by fabricating a googleId, same as they already could fabricate one
- *     against /api/auth/google-login today. Explicitly out of scope for this phase.), and a
+ *     session store in this app, so a guest can reset the counter by clearing history), and a
  *     strict "JourneyLog only, refuse everything else" system prompt.
  */
 
 const { createChatCompletion } = require("../services/deepseekClient");
 const { toolSchemas, toolImplementations } = require("../services/tourChatTools");
+const firebaseAuth = require("../config/firebaseAdmin");
 
 const GUEST_MESSAGE_LIMIT = 5;
 // One DeepSeek call, inspect for tool_calls, execute them, call again with results - repeated
@@ -53,8 +50,15 @@ const AUTH_SYSTEM_PROMPT = `${SHARED_RULES}
 
 Đây là phiên trò chuyện của người dùng đã đăng nhập. Nếu họ hỏi điều gì đó ngoài phạm vi du lịch/JourneyLog, hãy nhẹ nhàng cho biết bạn là trợ lý du lịch của JourneyLog và hướng cuộc trò chuyện quay lại việc gợi ý tour, thay vì từ chối cộc lốc.`;
 
-function isAuthenticated(body) {
-  return Boolean(body && typeof body.googleId === "string" && body.googleId.trim().length > 0);
+async function isAuthenticated(body) {
+  const idToken = body && typeof body.idToken === "string" ? body.idToken.trim() : "";
+  if (!idToken) return false;
+  try {
+    await firebaseAuth.verifyIdToken(idToken);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function sanitizeHistory(rawHistory) {
@@ -131,7 +135,7 @@ async function runChatLoop({ systemPrompt, history, userMessage }) {
 
 // @desc    Chatbot turn (DeepSeek function-calling over read-only tour tools)
 // @route   POST /api/chat
-// @access  Public (tiered: guest vs "authenticated" per client-supplied googleId - see file header)
+// @access  Public (guest) or Firebase-authenticated (uncapped tier)
 const chat = async (req, res, next) => {
   try {
     const userMessage = typeof req.body.message === "string" ? req.body.message.trim() : "";
@@ -139,7 +143,7 @@ const chat = async (req, res, next) => {
       return res.status(400).json({ message: "Thiếu nội dung tin nhắn (message)" });
     }
 
-    const authenticated = isAuthenticated(req.body);
+    const authenticated = await isAuthenticated(req.body);
     const history = sanitizeHistory(req.body.history);
 
     if (!authenticated) {

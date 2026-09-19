@@ -14,6 +14,10 @@ val localProperties = Properties().apply {
     }
 }
 val mapboxAccessToken: String = localProperties.getProperty("MAPBOX_ACCESS_TOKEN", "")
+val apiBaseUrl: String = localProperties.getProperty(
+    "API_BASE_URL",
+    "https://tour-moment-backend-42345853831.asia-southeast1.run.app/"
+)
 
 android {
     namespace = "com.example.mycurrenttour"
@@ -28,6 +32,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "MAPBOX_ACCESS_TOKEN", "\"$mapboxAccessToken\"")
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
     }
 
     buildFeatures {

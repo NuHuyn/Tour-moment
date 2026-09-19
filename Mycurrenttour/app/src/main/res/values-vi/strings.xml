@@ -80,7 +80,6 @@
     <string name="chat_input_hint">Nhập tin nhắn...</string>
     <string name="feature_menu">Menu</string>
     <string name="chatbot_greeting">Xin chào! Mình có thể hỗ trợ gì cho chuyến đi của bạn hôm nay? 🌿</string>
-    <string name="chatbot_suggestion_intro">Đây là chuyến đi mình nghĩ bạn sẽ thích:</string>
     <string-array name="quick_replies">
         <item>Gợi ý lịch trình 2N1Đ</item>
         <item>Địa điểm check-in đẹp</item>
@@ -159,4 +158,13 @@
     <string name="error_auth_generic">Đăng nhập thất bại, vui lòng thử lại</string>
     <string name="error_network">Không có kết nối mạng, vui lòng thử lại</string>
     <string name="error_sync_backend_failed">Đăng nhập thành công nhưng không đồng bộ được với máy chủ, vui lòng thử lại</string>
+    <string name="chatbot_error_generic">Xin lỗi, mình đang gặp sự cố kết nối. Bạn thử lại sau nhé!</string>
+    <string name="chatbot_guest_input_hint">Đăng nhập để tiếp tục trò chuyện</string>
+    <string name="error_trip_name_required">Vui lòng nhập tên chuyến đi</string>
+    <string name="error_end_before_start">Ngày kết thúc không thể trước ngày bắt đầu</string>
+    <string name="error_stop_required">Vui lòng thêm ít nhất một điểm dừng</string>
+    <string name="error_location_name_required">Vui lòng nhập tên địa điểm</string>
+    <string name="error_price_invalid">Chi phí phải là số nguyên không âm</string>
+    <string name="error_coordinates_invalid">Vui lòng nhập vĩ độ và kinh độ hợp lệ</string>
+    <string name="error_missing_tour">Không tìm thấy chuyến đi để thêm điểm dừng</string>
 </resources>

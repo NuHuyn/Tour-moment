@@ -25,6 +25,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.chip.Chip;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,9 +46,8 @@ import retrofit2.Response;
  * feasibility_report.md, Option A). No server-side chat session: this Activity is the source of
  * truth for conversation history (chatHistory) and is sent back in full (capped) on every turn.
  *
- * Access tier is decided by SessionManager.getSignInType(): a real Google session sends
- * googleId/email and gets the "authenticated" tier (no message cap) from the backend; a Guest
- * session sends neither and is capped server-side at 5 messages (see ChatResponse.isCapped()).
+ * Firebase sessions send a fresh ID token which the backend verifies before granting the
+ * uncapped tier. Guest sessions send no token and are capped server-side at 5 messages.
  */
 public class ChatbotActivity extends AppCompatActivity {
 
@@ -70,8 +71,7 @@ public class ChatbotActivity extends AppCompatActivity {
     private final List<ApiService.ChatMessageDto> chatHistory = new ArrayList<>();
     private static final int MAX_HISTORY_MESSAGES_SENT = 20;
 
-    private String googleId;
-    private String email;
+    private boolean hasAuthenticatedSession;
 
     // Set once the backend reports the guest message cap was hit (ChatResponse.isCapped()) -
     // blocks further sends client-side too so a fast double-tap can't sneak an extra request in
@@ -93,12 +93,10 @@ public class ChatbotActivity extends AppCompatActivity {
         edtChatInput = findViewById(R.id.edtChatInput);
         btnSendChat = findViewById(R.id.btnSendChat);
 
-        // Tier is decided purely by sign-in type, same self-reported trust model the rest of the
-        // app already uses (see SessionManager doc) - a Guest session (including "Continue as
-        // Guest") never sends googleId/email, so the backend always treats it as guest-tier.
-        boolean isAuthenticated = SessionManager.getSignInType(this) == SessionManager.SignInType.GOOGLE;
-        googleId = isAuthenticated ? SessionManager.getUserId(this) : null;
-        email = isAuthenticated ? SessionManager.getEmail(this) : null;
+        // Guests never request or send a Firebase token, so the backend keeps them in its
+        // rate-limited guest tier.
+        hasAuthenticatedSession =
+                SessionManager.getSignInType(this) == SessionManager.SignInType.GOOGLE;
 
         findViewById(R.id.btnChatBack).setOnClickListener(v -> finish());
         findViewById(R.id.btnChatMenu).setOnClickListener(v ->
@@ -138,7 +136,28 @@ public class ChatbotActivity extends AppCompatActivity {
         List<ApiService.ChatMessageDto> historyToSend = chatHistory.size() > MAX_HISTORY_MESSAGES_SENT
                 ? new ArrayList<>(chatHistory.subList(chatHistory.size() - MAX_HISTORY_MESSAGES_SENT, chatHistory.size()))
                 : new ArrayList<>(chatHistory);
-        ApiService.ChatRequest request = new ApiService.ChatRequest(question, historyToSend, googleId, email);
+        if (hasAuthenticatedSession) {
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            if (user != null) {
+                user.getIdToken(false)
+                        .addOnSuccessListener(result ->
+                                enqueueChatRequest(question, historyToSend, typingRow, result.getToken()))
+                        .addOnFailureListener(error -> {
+                            isSending = false;
+                            removeTypingIndicator(typingRow);
+                            addBotBubble(getString(R.string.chatbot_error_generic));
+                        });
+                return;
+            }
+        }
+        enqueueChatRequest(question, historyToSend, typingRow, null);
+    }
+
+    private void enqueueChatRequest(String question,
+                                    List<ApiService.ChatMessageDto> historyToSend,
+                                    View typingRow,
+                                    String idToken) {
+        ApiService.ChatRequest request = new ApiService.ChatRequest(question, historyToSend, idToken);
 
         ApiService apiService = ApiClient.getClient().create(ApiService.class);
         apiService.sendChatMessage(request).enqueue(new Callback<ApiService.ChatResponse>() {
