@@ -183,8 +183,10 @@ public class TourDetailActivity extends AppCompatActivity {
             int count = 0;
             for (Tour.Waypoint wp : tour.getWaypoints()) {
                 if (count >= 4) break; // first screenful is enough - no point prefetching the whole trip up front
-                if (wp.getPhotos() != null && !wp.getPhotos().isEmpty() && !wp.getPhotos().get(0).isEmpty()) {
-                    Picasso.get().load(wp.getPhotos().get(0)).fetch();
+                String photoUrl = wp.getPhotos() != null && !wp.getPhotos().isEmpty()
+                        ? wp.getPhotos().get(0) : null;
+                if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+                    Picasso.get().load(photoUrl).fetch();
                     count++;
                 }
             }
@@ -193,10 +195,16 @@ public class TourDetailActivity extends AppCompatActivity {
 
     private void preparePhotos(Tour tour) {
         photos.clear();
-        if (tour.getImageUrl() != null) photos.add(tour.getImageUrl());
+        if (tour.getImageUrl() != null && !tour.getImageUrl().trim().isEmpty()) {
+            photos.add(tour.getImageUrl());
+        }
         if (tour.getWaypoints() != null) {
             for (Tour.Waypoint wp : tour.getWaypoints()) {
-                if (wp.getPhotos() != null) photos.addAll(wp.getPhotos());
+                if (wp.getPhotos() != null) {
+                    for (String photoUrl : wp.getPhotos()) {
+                        if (photoUrl != null && !photoUrl.trim().isEmpty()) photos.add(photoUrl);
+                    }
+                }
             }
         }
         if (photos.isEmpty()) photos.add(null); // placeholder slide so the carousel/adapter still has 1 item

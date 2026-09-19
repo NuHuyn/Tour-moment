@@ -130,7 +130,8 @@ public class WaypointViewAdapter extends RecyclerView.Adapter<WaypointViewAdapte
 
         // Also guard the first photo string itself, not just the list - Picasso.load("") throws
         // ("Path must not be empty"), and a non-empty list could still contain an empty string.
-        if (currentWp.getPhotos() != null && !currentWp.getPhotos().isEmpty() && !currentWp.getPhotos().get(0).isEmpty()) {
+        if (currentWp.getPhotos() != null && !currentWp.getPhotos().isEmpty()
+                && currentWp.getPhotos().get(0) != null && !currentWp.getPhotos().get(0).trim().isEmpty()) {
             Picasso.get().load(currentWp.getPhotos().get(0))
                     .placeholder(R.drawable.centralvietnam)
                     .error(R.drawable.centralvietnam)

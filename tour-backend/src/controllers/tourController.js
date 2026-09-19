@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const fs = require("fs");
 const Tour = require("../models/Tour");
 const User = require("../models/User");
 const WaypointUnlock = require("../models/WaypointUnlock");
@@ -9,6 +10,23 @@ const {
   getUnlockedIndexSetsForTours,
 } = require("../services/waypointVisibility");
 const { getRatingSummariesForTours } = require("../services/reviewStats");
+
+const isSupportedImage = async (filePath) => {
+  const handle = await fs.promises.open(filePath, "r");
+  try {
+    const header = Buffer.alloc(12);
+    const { bytesRead } = await handle.read(header, 0, header.length, 0);
+    if (bytesRead < 6) return false;
+    const isJpeg = header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff;
+    const isPng = header.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    const signature = header.toString("ascii");
+    const isGif = signature.startsWith("GIF87a") || signature.startsWith("GIF89a");
+    const isWebp = signature.startsWith("RIFF") && signature.slice(8, 12) === "WEBP";
+    return isJpeg || isPng || isGif || isWebp;
+  } finally {
+    await handle.close();
+  }
+};
 
 // Helper to normalize coordinates from [latitude, longitude] to standard GeoJSON [longitude, latitude]
 const normalizeWaypoints = (waypoints) => {
@@ -30,10 +48,15 @@ const normalizeWaypoints = (waypoints) => {
 // @desc    Upload ảnh tour
 // @route   POST /api/tours/upload
 // @access  Public
-const uploadImage = (req, res, next) => {
+const uploadImage = async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    if (!(await isSupportedImage(req.file.path))) {
+      await fs.promises.unlink(req.file.path);
+      return res.status(400).json({ message: "Uploaded file is not a valid supported image" });
     }
 
     // Ưu tiên dùng BASE_URL từ biến môi trường, nếu không có thì lấy host từ request
@@ -104,10 +127,22 @@ const getMyTours = async (req, res, next) => {
 // @access  Public
 const updateTour = async (req, res, next) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "tourId is invalid" });
+    }
     if (req.body.waypoints) {
       req.body.waypoints = normalizeWaypoints(req.body.waypoints);
     }
-    const updatedTour = await Tour.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const allowedFields = [
+      "title", "description", "startDate", "endDate", "imageUrl", "videoUrl", "status", "waypoints",
+    ];
+    const updates = Object.fromEntries(
+      Object.entries(req.body).filter(([key]) => allowedFields.includes(key))
+    );
+    const updatedTour = await Tour.findByIdAndUpdate(req.params.id, updates, {
+      returnDocument: "after",
+      runValidators: true,
+    });
     if (!updatedTour) {
       return res.status(404).json({ message: "Không tìm thấy tour" });
     }
@@ -122,7 +157,14 @@ const updateTour = async (req, res, next) => {
 // @access  Public
 const shareTour = async (req, res, next) => {
   try {
-    const updatedTour = await Tour.findByIdAndUpdate(req.params.id, { isShared: true }, { new: true });
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "tourId is invalid" });
+    }
+    const updatedTour = await Tour.findByIdAndUpdate(
+      req.params.id,
+      { isShared: true },
+      { returnDocument: "after" }
+    );
     if (!updatedTour) {
       return res.status(404).json({ message: "Không tìm thấy tour" });
     }
@@ -142,8 +184,12 @@ const copyTour = async (req, res, next) => {
       return res.status(400).json({ message: "Thiếu thông tin userId người nhận" });
     }
 
+    if (!mongoose.isValidObjectId(req.params.tourId)) {
+      return res.status(400).json({ message: "tourId is invalid" });
+    }
+
     const originalTour = await Tour.findById(req.params.tourId);
-    if (!originalTour) {
+    if (!originalTour || !originalTour.isShared) {
       return res.status(404).json({ message: "Không tìm thấy tour gốc" });
     }
 
@@ -152,18 +198,20 @@ const copyTour = async (req, res, next) => {
     delete tourData.createdAt;
     delete tourData.updatedAt;
 
-    // Security: without this, copying someone else's shared tour would smuggle full real
-    // coordinates/names for waypoints the copying device never unlocked into the new (private)
-    // clone, bypassing the exact same redaction getPublicTours applies on read. Whatever this
-    // device hasn't unlocked stays redacted in the copy too - unlocking later works the same way
-    // it already does for any other tourId (WaypointUnlock is keyed by tourId, and the clone gets
-    // its own new _id).
     const unlockedIndexSet = await getUnlockedIndexSet(deviceId, req.params.tourId);
-    tourData.waypoints = redactTourWaypoints(tourData.waypoints, req.params.tourId, unlockedIndexSet);
+    const hasLockedWaypoint = (tourData.waypoints || []).some(
+      (waypoint, index) => isLocked(waypoint) && !unlockedIndexSet.has(index)
+    );
+    if (hasLockedWaypoint) {
+      return res.status(403).json({
+        message: "Unlock all paid waypoints on this device before copying the tour",
+      });
+    }
 
     const clonedTour = new Tour({
       ...tourData,
       authorId: userId,
+      originalTourId: originalTour.originalTourId || originalTour._id,
       isShared: false,
       status: "Upcoming",
       startDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -184,22 +232,29 @@ const getPublicTours = async (req, res, next) => {
   try {
     const deviceId = req.query.deviceId || null;
     const sharedTours = await Tour.find({ isShared: true }).lean().sort({ createdAt: -1 });
-    const unlockedByTour = await getUnlockedIndexSetsForTours(deviceId, sharedTours.map((t) => t._id));
-    const ratingByTour = await getRatingSummariesForTours(sharedTours.map((t) => t._id));
+    const tourIds = sharedTours.map((tour) => tour._id);
+    const authorIds = [...new Set(sharedTours.map((tour) => tour.authorId).filter(Boolean))];
+    const [unlockedByTour, ratingByTour, authors] = await Promise.all([
+      getUnlockedIndexSetsForTours(deviceId, tourIds),
+      getRatingSummariesForTours(tourIds),
+      User.find({ googleId: { $in: authorIds } }).select("googleId displayName photoUrl -_id").lean(),
+    ]);
+    const authorById = new Map(authors.map((author) => [author.googleId, {
+      displayName: author.displayName,
+      photoUrl: author.photoUrl,
+    }]));
 
-    const finalTours = await Promise.all(
-      sharedTours.map(async (tour) => {
-        const authorData = await User.findOne({ googleId: tour.authorId }).select("displayName photoUrl");
-        const rating = ratingByTour.get(String(tour._id)) || { avgRating: 0, reviewCount: 0 };
-        return {
-          ...tour,
-          waypoints: redactTourWaypoints(tour.waypoints, tour._id, unlockedByTour.get(String(tour._id))),
-          author: authorData || { displayName: "Traveler", photoUrl: null },
-          avgRating: rating.avgRating,
-          reviewCount: rating.reviewCount
-        };
-      })
-    );
+    const finalTours = sharedTours.map((tour) => {
+      const { authorId, ...publicTour } = tour;
+      const rating = ratingByTour.get(String(tour._id)) || { avgRating: 0, reviewCount: 0 };
+      return {
+        ...publicTour,
+        waypoints: redactTourWaypoints(tour.waypoints, tour._id, unlockedByTour.get(String(tour._id))),
+        author: authorById.get(authorId) || { displayName: "Traveler", photoUrl: null },
+        avgRating: rating.avgRating,
+        reviewCount: rating.reviewCount
+      };
+    });
 
     res.json(finalTours);
   } catch (err) {
@@ -223,17 +278,14 @@ const getTourById = async (req, res, next) => {
       return res.status(404).json({ message: "Không tìm thấy tour" });
     }
 
-    // Owner always sees their own tour in full (same rule as getMyTours) - locking only applies
-    // to viewers who aren't the author.
-    const isOwner = req.query.userId && tour.authorId === req.query.userId;
-    let waypoints = tour.waypoints;
-    if (!isOwner) {
-      const unlockedIndexSet = await getUnlockedIndexSet(deviceId, id);
-      waypoints = redactTourWaypoints(tour.waypoints, id, unlockedIndexSet);
-    }
+    const unlockedIndexSet = await getUnlockedIndexSet(deviceId, id);
+    const waypoints = redactTourWaypoints(tour.waypoints, id, unlockedIndexSet);
 
-    const authorData = await User.findOne({ googleId: tour.authorId }).select("displayName photoUrl");
-    res.json({ ...tour, waypoints, author: authorData || { displayName: "Traveler", photoUrl: null } });
+    const authorData = await User.findOne({ googleId: tour.authorId })
+      .select("displayName photoUrl -_id")
+      .lean();
+    const { authorId, ...publicTour } = tour;
+    res.json({ ...publicTour, waypoints, author: authorData || { displayName: "Traveler", photoUrl: null } });
   } catch (err) {
     next(err);
   }
@@ -327,6 +379,9 @@ const unlockAllWaypoints = async (req, res, next) => {
 const addWaypoint = async (req, res, next) => {
   try {
     const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "tourId is invalid" });
+    }
     let waypoint = req.body;
 
     // Normalize coordinates if single waypoint
@@ -340,7 +395,7 @@ const addWaypoint = async (req, res, next) => {
     const updatedTour = await Tour.findByIdAndUpdate(
       id,
       { $push: { waypoints: waypoint } },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
 
     if (!updatedTour) {

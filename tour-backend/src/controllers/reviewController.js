@@ -112,8 +112,8 @@ const submitReview = async (req, res, next) => {
 // @desc    Sửa đánh giá của chính mình cho 1 tour.
 // @route   PATCH /api/tours/:id/reviews
 // @body    { userId, rating, comment }
-// @access  Public (chỉ sửa được đánh giá khớp userId gửi lên - không có xác thực token thật,
-//          giống toàn bộ phần còn lại của app hiện tại, xem TODO trong LoginActivity.java)
+// @access  Public for backward compatibility. Before production, bind userId to a verified
+//          Firebase token in shared authentication middleware.
 const updateReview = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -132,7 +132,7 @@ const updateReview = async (req, res, next) => {
     const review = await Review.findOneAndUpdate(
       { tripId: id, userId },
       { rating, comment: comment || "" },
-      { new: true }
+      { returnDocument: "after" }
     );
     if (!review) {
       return res.status(404).json({ message: "Bạn chưa có đánh giá nào cho tour này" });

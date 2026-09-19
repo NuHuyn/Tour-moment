@@ -7,13 +7,11 @@ import java.util.UUID;
 
 /**
  * Local session store (SharedPreferences).
- * Records which door the user came in through on LoginActivity - Guest or Google. For Google,
- * once LoginActivity's POST /api/auth/google-login call succeeds, this holds the *backend's*
- * user id (User._id, which the backend sets equal to googleId - see authController.js) alongside
- * the display name/email/photo URL from the response body. That backend user id is what
+ * Records whether LoginActivity created a Guest or Firebase-authenticated session. After
+ * POST /api/auth/verify succeeds, this holds the backend User._id (equal to the verified
+ * Firebase uid) alongside the display name/email/photo URL. That stable user id is what
  * MyTourFragment, CreateTourActivity and TourAdapter's copyTour() use as authorId/userId when
- * calling the API - it is NOT a Firebase UID (Firebase Auth is never engaged in this app; see
- * LoginActivity's TODO).
+ * calling the API.
  *
  * Guest accounts get a locally-generated persistent id (KEY_GUEST_ID, format "guest_<uuid>")
  * instead - the backend doesn't require authorId to reference a real User row (see
@@ -60,7 +58,7 @@ public class SessionManager {
                 .apply();
     }
 
-    /** userId is the backend's User._id from the google-login response, not a Firebase UID. */
+    /** userId is the backend User._id returned after verifying the Firebase ID token. */
     public static void saveGoogleSession(Context context, String userId, String displayName, String email, String photoUrl) {
         prefs(context).edit()
                 .putString(KEY_SIGN_IN_TYPE, SignInType.GOOGLE.name())

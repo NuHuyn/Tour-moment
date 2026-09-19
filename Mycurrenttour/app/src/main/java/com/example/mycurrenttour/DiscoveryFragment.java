@@ -30,6 +30,7 @@ import com.google.android.material.chip.ChipGroup;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 import retrofit2.Call;
@@ -282,15 +283,15 @@ public class DiscoveryFragment extends Fragment {
         }
 
         List<Tour> filtered = new ArrayList<>();
-        String lowerQuery = query.toLowerCase().trim();
+        String lowerQuery = query.toLowerCase(Locale.ROOT).trim();
 
         for (Tour t : originalList) {
             boolean isMatch = false;
-            if (t.getTitle() != null && t.getTitle().toLowerCase().contains(lowerQuery)) isMatch = true;
+            if (t.getTitle() != null && t.getTitle().toLowerCase(Locale.ROOT).contains(lowerQuery)) isMatch = true;
 
             if (!isMatch && t.getWaypoints() != null) {
                 for (Tour.Waypoint wp : t.getWaypoints()) {
-                    if (wp.getLocationName() != null && wp.getLocationName().toLowerCase().contains(lowerQuery)) {
+                    if (wp.getLocationName() != null && wp.getLocationName().toLowerCase(Locale.ROOT).contains(lowerQuery)) {
                         isMatch = true;
                         break;
                     }
@@ -302,7 +303,6 @@ public class DiscoveryFragment extends Fragment {
     }
 
     private void loadTours() {
-        // TODO: set USE_MOCK_DATA = false khi backend sẵn sàng
         if (MockDataProvider.USE_MOCK_DATA) {
             originalList = MockDataProvider.getMockTours();
             filterTours(currentQuery);

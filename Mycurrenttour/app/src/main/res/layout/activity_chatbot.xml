@@ -79,7 +79,7 @@
                 android:layout_height="40dp"
                 android:padding="8dp"
                 android:src="@drawable/ic_more_vert"
-                android:tint="#1B5E20"
+                app:tint="#1B5E20"
                 android:contentDescription="@string/cd_more_options"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"

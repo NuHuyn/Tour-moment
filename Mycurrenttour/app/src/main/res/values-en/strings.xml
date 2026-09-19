@@ -1,4 +1,5 @@
 <resources>
+    <string name="app_name">My current tour</string>
     <!-- ================= Shared / common ================= -->
     <string name="back">Back</string>
     <string name="recenter">Recenter map</string>
@@ -77,7 +78,6 @@
     <string name="chat_input_hint">Type a message...</string>
     <string name="feature_menu">Menu</string>
     <string name="chatbot_greeting">Hi! How can I help with your trip today? 🌿</string>
-    <string name="chatbot_suggestion_intro">Here\'s a trip I think you\'ll like:</string>
     <string-array name="quick_replies">
         <item>Suggest a 2D1N itinerary</item>
         <item>Great photo spots</item>
@@ -156,4 +156,13 @@
     <string name="error_auth_generic">Sign-in failed, please try again</string>
     <string name="error_network">No network connection, please try again</string>
     <string name="error_sync_backend_failed">Signed in but could not sync with the server, please try again</string>
+    <string name="chatbot_error_generic">Sorry, I am having trouble connecting. Please try again later.</string>
+    <string name="chatbot_guest_input_hint">Sign in to continue chatting</string>
+    <string name="error_trip_name_required">Please enter the trip name</string>
+    <string name="error_end_before_start">End date cannot be before start date</string>
+    <string name="error_stop_required">Please add at least one stop</string>
+    <string name="error_location_name_required">Location name is required</string>
+    <string name="error_price_invalid">Price must be a non-negative whole number</string>
+    <string name="error_coordinates_invalid">Enter valid latitude and longitude</string>
+    <string name="error_missing_tour">No tour was provided for this stop</string>
 </resources>

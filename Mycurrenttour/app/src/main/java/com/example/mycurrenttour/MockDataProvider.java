@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * Nguồn dữ liệu giả (hardcode) để test UI trong lúc backend chưa chạy.
  *
- * TODO: set USE_MOCK_DATA = false khi backend sẵn sàng
+ * Set USE_MOCK_DATA to true only for isolated UI development without a backend.
  *
  * Cách dùng: các màn hình gọi API danh sách tour (DiscoveryFragment, MyTourFragment...)
  * kiểm tra cờ USE_MOCK_DATA ở đầu hàm load; nếu true thì dùng getMockTours()

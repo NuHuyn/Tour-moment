@@ -216,10 +216,16 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.ViewHolder> {
 
     private void showVideo(Tour tour, View v) {
         ArrayList<String> p = new ArrayList<>();
-        if (tour.getImageUrl() != null) p.add(tour.getImageUrl());
+        if (tour.getImageUrl() != null && !tour.getImageUrl().trim().isEmpty()) {
+            p.add(tour.getImageUrl());
+        }
         if (tour.getWaypoints() != null) {
             for (Tour.Waypoint wp : tour.getWaypoints()) {
-                if (wp.getPhotos() != null) p.addAll(wp.getPhotos());
+                if (wp.getPhotos() != null) {
+                    for (String photoUrl : wp.getPhotos()) {
+                        if (photoUrl != null && !photoUrl.trim().isEmpty()) p.add(photoUrl);
+                    }
+                }
             }
         }
         if (p.isEmpty()) {

@@ -121,7 +121,8 @@ public class RouteStopAdapter extends RecyclerView.Adapter<RouteStopAdapter.View
             Picasso.get().load(R.drawable.centralvietnam)
                     .transform(new BlurTransformation())
                     .into(holder.imgPhoto);
-        } else if (wp.getPhotos() != null && !wp.getPhotos().isEmpty() && !wp.getPhotos().get(0).isEmpty()) {
+        } else if (wp.getPhotos() != null && !wp.getPhotos().isEmpty()
+                && wp.getPhotos().get(0) != null && !wp.getPhotos().get(0).trim().isEmpty()) {
             // Also guard the first photo string itself, not just the list - Picasso.load("")
             // throws ("Path must not be empty"), and a non-empty list could still contain "".
             Picasso.get().load(wp.getPhotos().get(0))

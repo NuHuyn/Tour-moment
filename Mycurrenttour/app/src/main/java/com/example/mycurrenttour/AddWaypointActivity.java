@@ -4,8 +4,6 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -16,9 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -48,6 +44,11 @@ public class AddWaypointActivity extends AppCompatActivity {
 
 
         currentTourId = getIntent().getStringExtra("TOUR_ID");
+        if (currentTourId == null || currentTourId.trim().isEmpty()) {
+            Toast.makeText(this, R.string.error_missing_tour, Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
 
         btnSelectImg.setOnClickListener(v -> openGallery());
         btnSaveWp.setOnClickListener(v -> onSavePointClick());
@@ -92,6 +93,7 @@ public class AddWaypointActivity extends AppCompatActivity {
             result -> {
                 if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
                     Uri selectedUri = result.getData().getData();
+                    if (selectedUri == null) return;
                     imgPreview.setImageURI(selectedUri);
                     uploadImageToServer(selectedUri);
                 }
@@ -102,7 +104,9 @@ public class AddWaypointActivity extends AppCompatActivity {
         File file = FileUtils.getFile(AddWaypointActivity.this, uri);
         if (file == null) return;
 
-        RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
+        String mimeType = getContentResolver().getType(uri);
+        RequestBody requestFile = RequestBody.create(
+                MediaType.parse(mimeType != null ? mimeType : "image/jpeg"), file);
         MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
 
         apiService.uploadImage(body).enqueue(new Callback<ApiService.UploadResponse>() {
@@ -137,13 +141,20 @@ public class AddWaypointActivity extends AppCompatActivity {
             wp.setNote(edtNote.getText().toString());
 
             String priceStr = edtPrice.getText().toString();
-            wp.setPrice(priceStr.isEmpty() ? 0 : Integer.parseInt(priceStr));
+            int price = priceStr.isEmpty() ? 0 : Integer.parseInt(priceStr);
+            double latitude = Double.parseDouble(latStr);
+            double longitude = Double.parseDouble(lngStr);
+            if (price < 0 || !Double.isFinite(latitude) || !Double.isFinite(longitude)
+                    || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+                throw new NumberFormatException();
+            }
+            wp.setPrice(price);
 
             Tour.Coordinate coord = new Tour.Coordinate();
             coord.setType("Point");
             coord.setCoordinates(GisHelper.swapToGeoJsonCoordinates(
-                    Double.parseDouble(latStr),
-                    Double.parseDouble(lngStr)
+                    latitude,
+                    longitude
             ));
             wp.setCoordinate(coord);
 

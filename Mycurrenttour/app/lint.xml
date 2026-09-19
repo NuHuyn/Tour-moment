@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- Picasso contains an optional RemoteViews notification target. This app never uses it
+         and does not post notifications, so requesting POST_NOTIFICATIONS would be misleading. -->
+    <issue id="NotificationPermission" severity="ignore" />
+</lint>

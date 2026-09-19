@@ -23,21 +23,6 @@
         <item name="cornerSize">12dp</item>
     </style>
 
-    <style name="RoundedCorner16dp">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">16dp</item>
-    </style>
-
-    <!-- Tour Detail's full-bleed photo carousel (activity_tour_detail.xml) - square top (flush
-         with the screen edge), rounded bottom where it meets the white content sheet below. -->
-    <style name="RoundedBottomCorner24dp">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSizeTopLeft">0dp</item>
-        <item name="cornerSizeTopRight">0dp</item>
-        <item name="cornerSizeBottomLeft">24dp</item>
-        <item name="cornerSizeBottomRight">24dp</item>
-    </style>
-
     <!-- Login screen's email/password TextInputLayouts (activity_login.xml) - filled white pill
          box (same rounding as the screen's other pill buttons) so the form reads clearly against
          the dark photo background, dark text/hint on white rather than the app's usual

@@ -3,6 +3,8 @@
 .env.*
 **/.env
 **/.env.*
+!.env.example
+!**/.env.example
 
 # Android secrets
 Mycurrenttour/app/google-services.json
@@ -15,6 +17,7 @@ keystore.properties
 .gradle
 /local.properties
 /.idea/
+**/.idea/
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
@@ -34,3 +37,8 @@ tour-backend/uploads/
 
 # Local DB backups (contain real user trip data - never commit)
 tour-backend/backups/
+
+# Local backend runtime data
+tour-backend/node_modules/
+tour-backend/.cache/
+tour-backend/.data/
